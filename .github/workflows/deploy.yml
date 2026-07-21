@@ -43,20 +43,13 @@ jobs:
         mv deploy_root/public/* deploy_public/
         rm -rf deploy_root/public
 
+    - name: 🚀 Instalar lftp
+      run: sudo apt-get update && sudo apt-get install -y lftp
+
     - name: 🚀 Subir el cerebro de Laravel (carpeta novape)
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./deploy_root/
-        server-dir: ./novape/
+      run: |
+        lftp -c "set ftp:ssl-allow yes; set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }}; mirror -R -v --parallel=5 ./deploy_root/ ./novape/"
 
     - name: 🚀 Subir los archivos públicos (carpeta public_html)
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./deploy_public/
-        server-dir: ./public_html/
+      run: |
+        lftp -c "set ftp:ssl-allow yes; set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }}; mirror -R -v --parallel=5 ./deploy_public/ ./public_html/"
