@@ -36,8 +36,8 @@ jobs:
         mkdir -p deploy_root
         mkdir -p deploy_public
         
-        # Copiar todo (excluyendo basura) a la carpeta raíz temporal
-        rsync -a --exclude='.git' --exclude='.github' --exclude='deploy_root' --exclude='deploy_public' --exclude='node_modules' --exclude='tests' ./ deploy_root/
+        # Copiar todo (excluyendo basura y excluyendo vendor porque ya está en el servidor)
+        rsync -a --exclude='.git' --exclude='.github' --exclude='deploy_root' --exclude='deploy_public' --exclude='node_modules' --exclude='tests' --exclude='vendor' ./ deploy_root/
         
         # Mover solo el contenido público a la carpeta pública temporal
         mv deploy_root/public/* deploy_public/
