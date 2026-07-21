@@ -19,7 +19,7 @@ jobs:
         php-version: '8.2'
         
     - name: Instalar dependencias de PHP (Composer)
-      run: composer install --optimize-autoloader --no-dev
+      run: composer install --ignore-platform-reqs --optimize-autoloader --no-dev
 
     - name: Configurar Node.js
       uses: actions/setup-node@v4
