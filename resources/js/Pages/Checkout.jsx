@@ -160,26 +160,86 @@ export default function Checkout({ cart = [], total = 0 }) {
     const [coordInput, setCoordInput] = useState('');
     const [mapError, setMapError] = useState('');
 
-    // Algoritmo de búsqueda de dirección
+    // Algoritmo de búsqueda de dirección (Nominatim - OpenStreetMap, 100% GRATIS)
     const buscarEnMapa = async () => {
         setMapError('');
         if (!addressData.direccion || !addressData.distrito) {
             setMapError('Por favor ingresa tu Dirección y Distrito para buscar en el mapa.');
             return;
         }
-        const query = `${addressData.direccion}, ${addressData.distrito}, LIMA, PERU`;
+        const query = `${addressData.direccion}, ${addressData.distrito}, Lima, Peru`;
         try {
-            const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=AIzaSyCqF7-TBcJND7uC63s0qbd0PWU9ZEdE7q8`);
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=pe&limit=1`, {
+                headers: { 'Accept-Language': 'es' }
+            });
             const data = await res.json();
-            if (data.status === 'OK' && data.results.length > 0) {
-                const loc = data.results[0].geometry.location;
-                setMapCenter({ lat: loc.lat, lng: loc.lng });
+            if (data && data.length > 0) {
+                setMapCenter({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
             } else {
-                setMapError('No pudimos ubicar la dirección exacta. Por favor mueve el pin rojo en el mapa manualmente.');
+                setMapError('No pudimos ubicar la dirección exacta. Intenta con GPS o mueve el pin manualmente.');
             }
         } catch (e) {
-            setMapError('Error al conectar con Google Maps.');
+            setMapError('Error al buscar dirección. Intenta con el botón GPS.');
         }
+    };
+
+    // GPS: Detectar ubicación automática del dispositivo
+    const [loadingGps, setLoadingGps] = useState(false);
+    const usarGPS = () => {
+        setMapError('');
+        if (!navigator.geolocation) {
+            setMapError('Tu navegador no soporta geolocalización.');
+            return;
+        }
+        setLoadingGps(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                setMapCenter({ lat, lng });
+                // Reverse geocoding con Nominatim para autocompletar dirección
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                        headers: { 'Accept-Language': 'es' }
+                    });
+                    const data = await res.json();
+                    if (data && data.address) {
+                        const addr = data.address;
+                        const road = addr.road || addr.pedestrian || addr.footway || '';
+                        const houseNumber = addr.house_number || '';
+                        const suburb = addr.suburb || addr.neighbourhood || '';
+                        const fullAddr = [road, houseNumber, suburb].filter(Boolean).join(', ');
+                        if (fullAddr && !addressData.direccion) {
+                            handleAddressChange('direccion', fullAddr);
+                        }
+                        // Intentar autodetectar distrito
+                        const detectedDistrict = addr.city_district || addr.suburb || addr.town || '';
+                        if (detectedDistrict) {
+                            // Buscar coincidencia parcial en LIMA_DISTRITOS
+                            const match = LIMA_DISTRITOS.find(d => 
+                                d.toLowerCase().includes(detectedDistrict.toLowerCase()) ||
+                                detectedDistrict.toLowerCase().includes(d.toLowerCase())
+                            );
+                            if (match && !addressData.distrito) {
+                                handleAddressChange('distrito', match);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Reverse geocoding falló, pero la ubicación GPS sí se obtuvo
+                }
+                setLoadingGps(false);
+            },
+            (error) => {
+                setLoadingGps(false);
+                if (error.code === 1) {
+                    setMapError('Permiso de ubicación denegado. Activa el GPS en tu navegador.');
+                } else {
+                    setMapError('No se pudo obtener tu ubicación. Intenta buscar manualmente.');
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     };
 
     const aplicarCoordenadas = () => {
@@ -424,6 +484,10 @@ export default function Checkout({ cart = [], total = 0 }) {
                                                     <button className="efe-btn-outline" onClick={buscarEnMapa} style={{ padding: '8px 15px', fontSize: '13px' }}>
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                                         Buscar en Mapa
+                                                    </button>
+                                                    <button className="efe-btn-outline" onClick={usarGPS} disabled={loadingGps} style={{ padding: '8px 15px', fontSize: '13px', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                                                        {loadingGps ? 'Ubicando...' : 'Usar mi ubicación GPS'}
                                                     </button>
                                                 </div>
 

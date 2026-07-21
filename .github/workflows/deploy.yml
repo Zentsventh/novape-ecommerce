@@ -1,0 +1,62 @@
+name: Deploy to cPanel via FTP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Descargar código fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar PHP 8.2
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        
+    - name: Instalar dependencias de PHP (Composer)
+      run: composer install --optimize-autoloader --no-dev
+
+    - name: Configurar Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Instalar dependencias de JS y Compilar (Vite)
+      run: |
+        npm install
+        npm run build
+
+    - name: Preparar carpetas para la doble subida (cPanel)
+      run: |
+        mkdir -p deploy_root
+        mkdir -p deploy_public
+        
+        # Copiar todo (excluyendo basura) a la carpeta raíz temporal
+        rsync -a --exclude='.git' --exclude='.github' --exclude='deploy_root' --exclude='deploy_public' --exclude='node_modules' --exclude='tests' ./ deploy_root/
+        
+        # Mover solo el contenido público a la carpeta pública temporal
+        mv deploy_root/public/* deploy_public/
+        rm -rf deploy_root/public
+
+    - name: 🚀 Subir el cerebro de Laravel (carpeta novape)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy_root/
+        server-dir: ./novape/
+
+    - name: 🚀 Subir los archivos públicos (carpeta public_html)
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy_public/
+        server-dir: ./public_html/

@@ -275,7 +275,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                     <div style={{ fontSize: '13px', color: '#333' }}>{vendedor}</div>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'center', width: '220px', paddingLeft: '20px' }}>
-                                    <Link href={`/seguimiento?codigo=${pedido.codigo}`} style={{ width: '100%', padding: '10px 0', background: '#00B4FF', color: 'white', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>Revisar detalle</Link>
+                                    <Link href={`/perfil/compras/${pedido.codigo}`} style={{ width: '100%', padding: '10px 0', background: '#00B4FF', color: 'white', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>Revisar detalle</Link>
                                     <button onClick={() => { router.post('/cart/add', { variante_id: primerItem?.variante_id, cantidad: 1 }, { preserveScroll: true }) }} style={{ width: '100%', padding: '10px 0', background: 'white', border: '1px solid #00B4FF', color: '#00B4FF', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Comprar de nuevo</button>
                                 </div>
                             </div>

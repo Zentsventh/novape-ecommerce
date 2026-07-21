@@ -75,6 +75,7 @@ Route::get('/comparador', [CompareController::class, 'index'])->name('comparador
 
 // Ruta Pública de Escaneo QR (Comprobantes)
 Route::get('/comprobante/{codigo_ticket}', [\App\Http\Controllers\Admin\InvoiceController::class, 'verComprobantePublico'])->name('comprobante.publico');
+Route::get('/comprobante/ecommerce/{codigo}', [\App\Http\Controllers\InvoiceController::class, 'verComprobanteEcommerce'])->name('comprobante.ecommerce.publico');
 Route::post('/comparador/add', [CompareController::class, 'add'])->name('comparador.add');
 Route::post('/comparador/remove', [CompareController::class, 'remove'])->name('comparador.remove');
 Route::post('/comparador/clear', [CompareController::class, 'clear'])->name('comparador.clear');
@@ -99,6 +100,8 @@ Route::middleware('auth')->group(function () {
     
     // Perfil Mi Cuenta
     Route::get('/perfil', [ProfileController::class, 'index'])->name('perfil');
+    Route::get('/perfil/compras/{codigo}', [ProfileController::class, 'showOrder'])->name('perfil.compras.show');
+    Route::get('/factura/ecommerce/{id}/descargar', [\App\Http\Controllers\InvoiceController::class, 'descargarComprobante'])->name('factura.ecommerce.descargar');
     Route::post('/perfil/update', [ProfileController::class, 'update'])->name('perfil.update');
     Route::post('/perfil/password', [ProfileController::class, 'updatePassword'])->name('perfil.password');
     Route::post('/perfil/direccion', [ProfileController::class, 'storeDireccion'])->name('perfil.direccion.store');

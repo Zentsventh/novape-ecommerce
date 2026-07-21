@@ -33,6 +33,20 @@ class ProfileController extends Controller
         ]);
     }
 
+    public function showOrder($codigo)
+    {
+        $usuario = Auth::user();
+
+        $pedido = \App\Models\Pedido::with(['items.variante.producto.imagenes', 'items.variante.producto.proveedor', 'usuario'])
+            ->where('codigo', $codigo)
+            ->where('usuario_id', $usuario->id)
+            ->firstOrFail();
+
+        return Inertia::render('Auth/OrderDetails', [
+            'pedido' => $pedido,
+        ]);
+    }
+
     public function update(UpdateProfileRequest $request)
     {
         $usuario = Auth::user();

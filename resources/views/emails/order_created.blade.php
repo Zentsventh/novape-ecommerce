@@ -6,9 +6,11 @@
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     
+    <div style="text-align: center; margin-bottom: 20px; background-color: #000; padding: 20px 0; border-radius: 8px 8px 0 0;">
+        <img src="{{ url('images/logofactura.png') }}" alt="NOVAPE" style="height: 50px;">
+    </div>
     <div style="text-align: center; margin-bottom: 20px;">
-        <h1 style="color: #0056b3;">NOVAPE</h1>
-        <h2>¡Gracias por tu compra!</h2>
+        <h2 style="color: #333;">¡Gracias por tu compra!</h2>
     </div>
 
     <p>Hola {{ $pedido->usuario ? $pedido->usuario->nombres : 'Cliente' }},</p>
