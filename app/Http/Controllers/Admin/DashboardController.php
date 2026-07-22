@@ -499,9 +499,8 @@ class DashboardController extends Controller
             'topProductosVendidos' => $topProductosVendidos
         ];
 
-        return \Spatie\LaravelPdf\Facades\Pdf::view('pdf.dashboard', $data)
-            ->format('a4')
-            ->name('reporte_dashboard_' . date('Y-m-d') . '.pdf')
-            ->download();
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.dashboard', $data)
+            ->setPaper('A4', 'portrait')
+            ->download('reporte_dashboard_' . date('Y-m-d') . '.pdf');
     }
 }

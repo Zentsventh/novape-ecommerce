@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Spatie\LaravelPdf\Facades\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Illuminate\Support\Facades\Storage;
 
@@ -178,9 +178,8 @@ class InvoiceController extends Controller
         // Compilar la vista Blade y tomar la fotografía PDF (Formato Ticket 80mm)
         // 80mm width is approximately 3.15 inches (ancho típico de ticketera térmica)
         // Height lo dejamos algo holgado (ej. 297mm o auto si el paquete lo permite, usaremos papel continuo)
-        Pdf::view('pdf.ticket_pos', $data)
-            ->paperSize(80, 297, 'mm') // 80mm width. Height 297mm (se corta al imprimir). En ticketeras el rollo es continuo.
-            ->margins(0, 0, 0, 0)
+        Pdf::loadView('pdf.ticket_pos', $data)
+            ->setPaper(array(0, 0, 226.77, 841.89), 'portrait') // 80mm width x 297mm height in points (para ticketeras)
             ->save($fullPath);
 
         // Devolver el archivo al navegador para visualizar/descargar en una nueva pestaña (inline)

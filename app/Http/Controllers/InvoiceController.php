@@ -127,9 +127,8 @@ class InvoiceController extends Controller
         }
         $fullPath = "{$storagePath}/{$pdfName}";
 
-        \Spatie\LaravelPdf\Facades\Pdf::view('pdf.comprobante_ecommerce', $data)
-            ->format('A4')
-            ->margins(10, 10, 10, 10)
+        \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.comprobante_ecommerce', $data)
+            ->setPaper('A4', 'portrait')
             ->save($fullPath);
 
         return response()->download($fullPath, $pdfName, [

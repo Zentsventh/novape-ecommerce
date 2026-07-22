@@ -242,10 +242,9 @@ class OrderController extends Controller
             'horario' => 'Lunes a Viernes 9am - 6pm'
         ];
 
-        return \Spatie\LaravelPdf\Facades\Pdf::view('pdf.factura', compact('pedido', 'logoBase64', 'empresa'))
-            ->format('a4')
-            ->name('factura-'.$pedido->codigo.'.pdf')
-            ->download();
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.factura', compact('pedido', 'logoBase64', 'empresa'))
+            ->setPaper('A4', 'portrait')
+            ->download('factura-'.$pedido->codigo.'.pdf');
     }
 
     public function export()
