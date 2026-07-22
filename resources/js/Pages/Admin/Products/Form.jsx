@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import axios from 'axios';
 
 export default function Form({ producto, marcas, categorias, proveedores, listaEspecificaciones = [] }) {
     const isEditing = !!producto;
@@ -34,6 +35,15 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
             valor: pe.valor
         })) || [],
     });
+
+    const [localCategorias, setLocalCategorias] = useState(categorias);
+    const [selectedMainCategory, setSelectedMainCategory] = useState('');
+    
+    // Modal state for category creation
+    const [showCatModal, setShowCatModal] = useState(false);
+    const [newCatNombre, setNewCatNombre] = useState('');
+    const [newCatPadreId, setNewCatPadreId] = useState('');
+    const [isSavingCat, setIsSavingCat] = useState(false);
 
     const submit = (e) => {
         e.preventDefault();
@@ -85,6 +95,30 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
             setData('categorias', data.categorias.filter(id => id !== catId));
         } else {
             setData('categorias', [...data.categorias, catId]);
+        }
+    };
+
+    const handleSaveNewCategory = async (e) => {
+        e.preventDefault();
+        setIsSavingCat(true);
+        try {
+            const res = await axios.post('/api/categorias', {
+                nombre: newCatNombre,
+                categoria_padre_id: newCatPadreId || null
+            });
+            if (res.data.success) {
+                setLocalCategorias([...localCategorias, res.data.categoria]);
+                setShowCatModal(false);
+                setNewCatNombre('');
+                setNewCatPadreId('');
+                if (res.data.categoria.categoria_padre_id) {
+                    setData('categorias', [...data.categorias, res.data.categoria.id]);
+                }
+            }
+        } catch (error) {
+            alert('Error al crear categoría');
+        } finally {
+            setIsSavingCat(false);
         }
     };
 
@@ -312,21 +346,64 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
 
                     {/* Categorías y Estado */}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Categorías</label>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                {categorias.map(cat => (
-                                    <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--admin-border)', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', opacity: data.categorias.includes(cat.id) ? 1 : 0.6, border: data.categorias.includes(cat.id) ? '1px solid #007BFF' : '1px solid transparent' }}>
-                                        <input 
-                                            type="checkbox" 
-                                            checked={data.categorias.includes(cat.id)}
-                                            onChange={() => handleCategoryToggle(cat.id)}
-                                            style={{ display: 'none' }}
-                                        />
-                                        <span style={{ fontSize: '13px', color: data.categorias.includes(cat.id) ? '#007BFF' : 'var(--admin-text-main)', fontWeight: data.categorias.includes(cat.id) ? 'bold' : 'normal' }}>{cat.nombre}</span>
-                                    </label>
-                                ))}
+                        <div style={{ background: 'var(--admin-bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <label style={{ display: 'block', margin: 0, fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Categorías del Producto</label>
+                                <button type="button" onClick={() => setShowCatModal(true)} style={{ background: 'var(--admin-bg-body)', color: '#00B4FF', border: '1px solid #00B4FF', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>+ Nueva Categoría</button>
                             </div>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--admin-text-muted)' }}>1. Categoría Principal</label>
+                                    <select 
+                                        value={selectedMainCategory} 
+                                        onChange={(e) => setSelectedMainCategory(e.target.value)} 
+                                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--admin-border)', background: 'transparent' }}
+                                    >
+                                        <option value="">-- Seleccionar --</option>
+                                        {localCategorias.filter(c => !c.categoria_padre_id).map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--admin-text-muted)' }}>2. Subcategorías (Opcional)</label>
+                                    {selectedMainCategory ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '150px', overflowY: 'auto', padding: '5px' }}>
+                                            {localCategorias.filter(c => c.categoria_padre_id == selectedMainCategory).length > 0 ? (
+                                                localCategorias.filter(c => c.categoria_padre_id == selectedMainCategory).map(cat => (
+                                                    <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--admin-bg-body)', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer', border: data.categorias.includes(cat.id) ? '1px solid #00B4FF' : '1px solid var(--admin-border)' }}>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={data.categorias.includes(cat.id)}
+                                                            onChange={() => handleCategoryToggle(cat.id)}
+                                                            style={{ display: 'none' }}
+                                                        />
+                                                        <span style={{ fontSize: '12px', color: data.categorias.includes(cat.id) ? '#00B4FF' : 'var(--admin-text-main)', fontWeight: data.categorias.includes(cat.id) ? 'bold' : 'normal' }}>{cat.nombre}</span>
+                                                    </label>
+                                                ))
+                                            ) : (
+                                                <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)', fontStyle: 'italic' }}>No hay subcategorías</span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: '10px', background: 'var(--admin-bg-body)', borderRadius: '8px', color: 'var(--admin-text-muted)', fontSize: '12px', textAlign: 'center' }}>Selecciona primero una principal</div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {data.categorias.length > 0 && (
+                                <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px dashed var(--admin-border)' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--admin-text-muted)', display: 'block', marginBottom: '5px' }}>Seleccionadas:</span>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                        {data.categorias.map(id => {
+                                            const c = localCategorias.find(cat => cat.id === id);
+                                            return c ? <span key={id} style={{ background: 'rgba(0, 180, 255, 0.1)', color: '#00B4FF', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>{c.nombre} <button type="button" onClick={() => handleCategoryToggle(id)} style={{ background:'none',border:'none',color:'#00B4FF',cursor:'pointer',marginLeft:'5px',padding:0 }}>×</button></span> : null;
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Estado</label>
@@ -354,9 +431,38 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
                             {processing ? 'Guardando...' : (isEditing ? 'Actualizar Producto' : 'Guardar Producto')}
                         </button>
                     </div>
-
                 </form>
             </div>
+
+            {/* Modal Nueva Categoria */}
+            {showCatModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px' }}>
+                        <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Nueva Categoría</h2>
+                        <form onSubmit={handleSaveNewCategory} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Nombre</label>
+                                <input type="text" value={newCatNombre} onChange={e => setNewCatNombre(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} required placeholder="Ej: Smartphones" />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '13px' }}>Categoría Padre (Opcional)</label>
+                                <select value={newCatPadreId} onChange={e => setNewCatPadreId(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }}>
+                                    <option value="">Ninguna (Será Principal)</option>
+                                    {localCategorias.filter(c => !c.categoria_padre_id).map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                                <button type="button" onClick={() => setShowCatModal(false)} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #ccc', background: 'transparent', cursor: 'pointer' }}>Cancelar</button>
+                                <button type="submit" disabled={isSavingCat} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: 'none', background: '#00B4FF', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}>
+                                    {isSavingCat ? 'Guardando...' : 'Guardar'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

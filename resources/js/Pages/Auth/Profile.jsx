@@ -58,6 +58,35 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
         password: ''
     });
 
+    const [showEditPhone, setShowEditPhone] = useState(false);
+    const [phoneOtpStep, setPhoneOtpStep] = useState('phone');
+    const [showTooltip, setShowTooltip] = useState(false);
+
+    const phoneForm = useForm({
+        telefono: user.telefono || '',
+        codigo: ''
+    });
+
+    const submitPhoneRequest = (e) => {
+        e.preventDefault();
+        phoneForm.post('/perfil/celular/solicitar-codigo', {
+            preserveScroll: true,
+            onSuccess: () => setPhoneOtpStep('otp')
+        });
+    };
+
+    const submitPhoneVerify = (e) => {
+        e.preventDefault();
+        phoneForm.post('/perfil/celular/verificar-codigo', {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowEditPhone(false);
+                setPhoneOtpStep('phone');
+                phoneForm.reset('codigo');
+            }
+        });
+    };
+
     const listaForm = useForm({
         nombre: '', es_publica: false
     });
@@ -337,10 +366,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             <h2 style={{ fontSize: '20px', color: '#333', fontWeight: '400', marginBottom: '25px' }}>Datos personales</h2>
             <div style={{ background: 'white', borderRadius: '12px', padding: '0 30px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                 <div style={{ padding: '25px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                        <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '5px' }}>Tipo de cuenta</div>
-                        <div style={{ fontSize: '15px', color: '#333', fontWeight: 'bold' }}>{user.tipo_documento === 'RUC' ? 'Mayorista (Empresa)' : 'Minorista (Persona Natural)'}</div>
-                    </div>
+                    <div style={{ visibility: 'hidden', height: 0 }}></div>
                 </div>
                 <div style={{ padding: '25px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
@@ -360,12 +386,25 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                         <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '5px' }}>Celular</div>
                         <div style={{ fontSize: '15px', color: '#333' }}>+51 {user.telefono || '-'}</div>
                     </div>
-                    <button onClick={() => setShowEditProfile(true)} style={{ background: 'none', border: 'none', color: '#00B4FF', fontSize: '14px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>Editar</button>
+                    <button onClick={() => setShowEditPhone(true)} style={{ background: 'none', border: 'none', color: '#00B4FF', fontSize: '14px', fontWeight: '600', textDecoration: 'none', cursor: 'pointer' }}>Editar</button>
                 </div>
                 <div style={{ padding: '25px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '5px' }}>Correo</div>
-                        <div style={{ fontSize: '15px', color: '#333' }}>{user.email}</div>
+                        <div style={{ fontSize: '15px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {user.email}
+                            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                <svg onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" style={{ cursor: 'help' }}>
+                                    <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                </svg>
+                                {showTooltip && (
+                                    <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '10px', background: '#333', color: 'white', padding: '12px 16px', borderRadius: '6px', fontSize: '13px', width: '250px', zIndex: 10, boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                                        <div style={{ position: 'absolute', top: '-6px', left: '50%', transform: 'translateX(-50%)', borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid #333' }}></div>
+                                        Por tu seguridad, no es posible editar tu correo. Si necesitas usar otro, crea una nueva cuenta.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -640,23 +679,66 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                 <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Apellidos</label>
                                 <input type="text" value={profileForm.data.apellidos} onChange={e => profileForm.setData('apellidos', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
                             </div>
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Celular</label>
-                                <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1' }}>
-                                    <span style={{ padding: '10px 10px 10px 0', fontSize: '15px', color: '#333' }}>+51</span>
-                                    <input type="text" value={profileForm.data.telefono} onChange={e => profileForm.setData('telefono', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', outline: 'none', fontSize: '15px', color: '#333' }} placeholder="Ingresa un celular" />
-                                </div>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Documento (DNI)</label>
-                                <input type="text" value={profileForm.data.dni} onChange={e => profileForm.setData('dni', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} />
-                            </div>
-
                             <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
                                 <button type="button" onClick={() => setShowEditProfile(false)} style={{ padding: '12px 24px', background: 'white', border: 'none', color: '#333', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
                                 <button type="submit" disabled={profileForm.processing} style={{ padding: '12px 30px', background: '#00B4FF', border: 'none', borderRadius: '24px', color: 'white', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 180, 255, 0.2)' }}>{profileForm.processing ? 'Guardando...' : 'Guardar'}</button>
                             </div>
                         </form>
+                    </div>
+                </>
+            )}
+
+            {/* Modal Editar Celular */}
+            {showEditPhone && (
+                <>
+                    <div onClick={() => setShowEditPhone(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                Editar celular
+                            </h3>
+                            <button onClick={() => setShowEditPhone(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>✕</button>
+                        </div>
+                        
+                        {phoneOtpStep === 'phone' ? (
+                            <form onSubmit={submitPhoneRequest} style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                                <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px', lineHeight: '1.5' }}>
+                                    Necesitamos validar tu identidad. Al continuar, <strong>enviaremos un código verificador al correo {user.email.substring(0, 2)}********@{user.email.split('@')[1]}.</strong>
+                                </p>
+                                
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Celular</label>
+                                    <div style={{ display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1' }}>
+                                        <span style={{ padding: '10px 10px 10px 0', fontSize: '15px', color: '#333' }}>+51</span>
+                                        <input type="text" value={phoneForm.data.telefono} onChange={e => phoneForm.setData('telefono', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', outline: 'none', fontSize: '15px', color: '#333' }} placeholder="Ingresa un celular" required />
+                                    </div>
+                                    {phoneForm.errors.telefono && <div style={{ color: '#e11d48', fontSize: '12px', marginTop: '5px' }}>{phoneForm.errors.telefono}</div>}
+                                </div>
+                                
+                                <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                                    <button type="button" onClick={() => setShowEditPhone(false)} style={{ padding: '12px 24px', background: 'white', border: 'none', color: '#333', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
+                                    <button type="submit" disabled={phoneForm.processing} style={{ padding: '12px 30px', background: '#334155', border: 'none', borderRadius: '24px', color: 'white', fontWeight: '600', cursor: 'pointer' }}>{phoneForm.processing ? 'Enviando...' : 'Continuar'}</button>
+                                </div>
+                            </form>
+                        ) : (
+                            <form onSubmit={submitPhoneVerify} style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                                <p style={{ fontSize: '13px', color: '#333', marginBottom: '10px', lineHeight: '1.5' }}>
+                                    Ingresa el código de 6 dígitos que enviamos a tu correo.
+                                </p>
+                                
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Código de verificación</label>
+                                    <input type="text" maxLength="6" value={phoneForm.data.codigo} onChange={e => phoneForm.setData('codigo', e.target.value.replace(/\D/g, ''))} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '24px', letterSpacing: '10px', textAlign: 'center', color: '#333' }} placeholder="000000" required />
+                                    {phoneForm.errors.codigo && <div style={{ color: '#e11d48', fontSize: '12px', marginTop: '5px' }}>{phoneForm.errors.codigo}</div>}
+                                </div>
+                                
+                                <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
+                                    <button type="button" onClick={() => setPhoneOtpStep('phone')} style={{ padding: '12px 24px', background: 'white', border: 'none', color: '#333', fontWeight: '600', cursor: 'pointer' }}>Volver</button>
+                                    <button type="submit" disabled={phoneForm.processing} style={{ padding: '12px 30px', background: '#00B4FF', border: 'none', borderRadius: '24px', color: 'white', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 10px rgba(0, 180, 255, 0.2)' }}>{phoneForm.processing ? 'Validando...' : 'Verificar'}</button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 </>
             )}

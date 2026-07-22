@@ -51,10 +51,10 @@ class DashboardController extends Controller
 
         try {
             $totalPedidosQuery = Pedido::query();
-            $pedidosPendientesQuery = Pedido::where('estado', 'pendiente');
-            $pedidosEnviadosQuery = Pedido::where('estado', 'enviado');
-            $pedidosCompletadosQuery = Pedido::where('estado', 'completado');
-            $pedidosCanceladosQuery = Pedido::where('estado', 'cancelado');
+            $pedidosPendientesQuery = Pedido::whereRaw('LOWER(estado) = ?', ['pendiente']);
+            $pedidosEnviadosQuery = Pedido::whereRaw('LOWER(estado) = ?', ['enviado']);
+            $pedidosCompletadosQuery = Pedido::whereRaw('LOWER(estado) = ?', ['completado']);
+            $pedidosCanceladosQuery = Pedido::whereRaw('LOWER(estado) = ?', ['cancelado']);
             
             $totalPedidos = $dateFilterQuery($totalPedidosQuery)->count();
             $pedidosPendientes = $dateFilterQuery($pedidosPendientesQuery)->count();
@@ -62,7 +62,7 @@ class DashboardController extends Controller
             $pedidosCompletados = $dateFilterQuery($pedidosCompletadosQuery)->count();
             $pedidosCancelados = $dateFilterQuery($pedidosCanceladosQuery)->count();
 
-            $ventasTotalQuery = Pedido::where('estado', 'completado');
+            $ventasTotalQuery = Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado']);
             $ventasTotal = (float) $dateFilterQuery($ventasTotalQuery)->sum('total');
 
             $ventasPosQuery = DB::table('ventas_pos');
@@ -81,7 +81,7 @@ class DashboardController extends Controller
             $gananciaNeta = $ventasTotal - $costosTotal;
 
             // Ventas mes stays relative to current month, SIEMPRE.
-            $ventasMesQuery = Pedido::where('estado', 'completado')
+            $ventasMesQuery = Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado'])
                 ->where('created_at', '>=', now()->startOfMonth());
             $ventasMes = (float) $ventasMesQuery->sum('total');
 
@@ -115,7 +115,7 @@ class DashboardController extends Controller
             for ($i = 6; $i >= 0; $i--) {
                 $day = $endDateCarbon->copy()->subDays($i);
                 
-                $webSales = (float) Pedido::where('estado', 'completado')
+                $webSales = (float) Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado'])
                     ->whereDate('created_at', $day)
                     ->sum('total');
                     

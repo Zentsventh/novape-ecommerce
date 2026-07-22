@@ -27,17 +27,44 @@ class AlmacenController extends Controller
             $almacen->total_skus = $stockPorAlmacen[$almacen->id]->total_skus ?? 0;
         }
 
-        // Get all products for transfer
+        // Get all products for transfer with their category and brand for filtering
         $productos = DB::table('producto')
             ->join('variante', 'variante.producto_id', '=', 'producto.id')
-            ->select('producto.nombre', 'variante.id as variante_id', 'variante.sku', 'variante.stock')
+            ->leftJoin('producto_categoria', 'producto_categoria.producto_id', '=', 'producto.id')
+            ->leftJoin('categoria', 'categoria.id', '=', 'producto_categoria.categoria_id')
+            ->leftJoin('categoria as padre', 'categoria.categoria_padre_id', '=', 'padre.id')
+            ->whereNull('producto.deleted_at')
+            ->whereNull('variante.deleted_at')
             ->where('producto.activo', true)
+            ->select(
+                'producto.nombre',
+                'producto.marca_id',
+                'variante.id as variante_id',
+                'variante.sku',
+                DB::raw('COALESCE(padre.id, categoria.id) as category_id')
+            )
+            ->distinct()
             ->orderBy('producto.nombre')
             ->get();
+
+        $categorias = DB::table('categoria')
+            ->where('activa', true)
+            ->whereNull('categoria_padre_id')
+            ->orderBy('nombre')
+            ->get();
+
+        $marcas = DB::table('marca')
+            ->orderBy('nombre')
+            ->get();
+
+        $stocks = DB::table('stock_almacen')->select('almacen_id', 'variante_id', 'cantidad')->get();
 
         return Inertia::render('Admin/Almacenes/Index', [
             'almacenes' => $almacenes,
             'productos' => $productos,
+            'categorias' => $categorias,
+            'marcas' => $marcas,
+            'stocks' => $stocks,
             'logoUrl' => $logoUrl
         ]);
     }

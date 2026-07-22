@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Session;
+use App\Mail\VerificarCelularMail;
 use App\Http\Requests\UpdateProfileRequest;
 
 class ProfileController extends Controller
@@ -50,20 +53,65 @@ class ProfileController extends Controller
     public function update(UpdateProfileRequest $request)
     {
         $usuario = Auth::user();
-
-        $validated = $request->validated();
-
+        
         $usuario->update([
-            'nombres' => $validated['nombres'],
-            'apellidos' => $validated['apellidos'],
-            'dni' => $validated['dni'],
-            'fecha_nacimiento' => $validated['fecha_nacimiento'],
-            'telefono' => $validated['telefono'],
+            'nombres' => $request->nombres,
+            'apellidos' => $request->apellidos,
+            'dni' => $request->dni,
+            // El celular se actualiza por OTP, no por este método general
         ]);
 
+        return back()->with('success', 'Perfil actualizado exitosamente.');
+    }
 
+    public function requestPhoneUpdateOtp(Request $request)
+    {
+        $request->validate([
+            'telefono' => 'required|string|min:9|max:15'
+        ]);
 
-        return back()->with('success', 'Tus datos se han actualizado correctamente.');
+        $usuario = Auth::user();
+        
+        // Generar código de 6 dígitos
+        $codigo = (string) rand(100000, 999999);
+        
+        // Guardar en sesión por 10 minutos
+        Session::put('phone_update_otp', $codigo);
+        Session::put('phone_update_new_number', $request->telefono);
+        Session::put('phone_update_expires_at', now()->addMinutes(10));
+
+        // Enviar correo
+        Mail::to($usuario->email)->send(new VerificarCelularMail($usuario, $codigo));
+
+        return back()->with('success', 'Código enviado a tu correo.');
+    }
+
+    public function verifyPhoneUpdateOtp(Request $request)
+    {
+        $request->validate([
+            'codigo' => 'required|string|size:6'
+        ]);
+
+        $codigoGuardado = Session::get('phone_update_otp');
+        $expiraEn = Session::get('phone_update_expires_at');
+        $nuevoCelular = Session::get('phone_update_new_number');
+
+        if (!$codigoGuardado || !$expiraEn || now()->greaterThan($expiraEn)) {
+            return back()->withErrors(['codigo' => 'El código ha expirado o no es válido. Solicita uno nuevo.']);
+        }
+
+        if ($request->codigo !== $codigoGuardado) {
+            return back()->withErrors(['codigo' => 'El código ingresado es incorrecto.']);
+        }
+
+        // Todo correcto, actualizar celular
+        $usuario = Auth::user();
+        $usuario->update(['telefono' => $nuevoCelular]);
+
+        // Limpiar sesión
+        Session::forget(['phone_update_otp', 'phone_update_new_number', 'phone_update_expires_at']);
+
+        return back()->with('success', 'Celular actualizado exitosamente.');
     }
 
     public function updatePassword(Request $request)

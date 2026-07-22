@@ -42,6 +42,22 @@ class CategoryController extends Controller
         return redirect()->route('admin.categorias')->with('success', 'Categoría creada exitosamente.');
     }
 
+    public function storeApi(Request $request)
+    {
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:100',
+            'descripcion' => 'nullable|string|max:255',
+            'categoria_padre_id' => 'nullable|integer|exists:categoria,id',
+        ]);
+
+        $categoria = Categoria::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'categoria' => $categoria
+        ]);
+    }
+
     public function edit($id)
     {
         $categoria = Categoria::findOrFail($id);

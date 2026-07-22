@@ -103,6 +103,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/perfil/compras/{codigo}', [ProfileController::class, 'showOrder'])->name('perfil.compras.show');
     Route::get('/factura/ecommerce/{id}/descargar', [\App\Http\Controllers\InvoiceController::class, 'descargarComprobante'])->name('factura.ecommerce.descargar');
     Route::post('/perfil/update', [ProfileController::class, 'update'])->name('perfil.update');
+    Route::post('/perfil/celular/solicitar-codigo', [ProfileController::class, 'requestPhoneUpdateOtp'])->name('perfil.celular.solicitar');
+    Route::post('/perfil/celular/verificar-codigo', [ProfileController::class, 'verifyPhoneUpdateOtp'])->name('perfil.celular.verificar');
     Route::post('/perfil/password', [ProfileController::class, 'updatePassword'])->name('perfil.password');
     Route::post('/perfil/direccion', [ProfileController::class, 'storeDireccion'])->name('perfil.direccion.store');
     Route::post('/perfil/direccion/{id}/principal', [ProfileController::class, 'setPrincipalDireccion'])->name('perfil.direccion.principal');
@@ -174,6 +176,7 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
         Route::get('/categorias', [CategoryController::class, 'index'])->name('admin.categorias');
         Route::get('/categorias/create', [CategoryController::class, 'create'])->name('admin.categorias.create');
         Route::post('/categorias', [CategoryController::class, 'store'])->name('admin.categorias.store');
+        Route::post('/api/categorias', [CategoryController::class, 'storeApi'])->name('api.categorias.store');
         Route::get('/categorias/{id}/edit', [CategoryController::class, 'edit'])->name('admin.categorias.edit');
         Route::put('/categorias/{id}', [CategoryController::class, 'update'])->name('admin.categorias.update');
         Route::delete('/categorias/{id}', [CategoryController::class, 'destroy'])->name('admin.categorias.destroy');

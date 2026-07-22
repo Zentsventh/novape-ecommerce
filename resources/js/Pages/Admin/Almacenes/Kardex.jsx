@@ -72,23 +72,40 @@ export default function Kardex({ almacen, movimientos, logoUrl }) {
             
             {/* Simple Pagination */}
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px', gap: '10px' }}>
-                {movimientos.links && movimientos.links.map((link, idx) => (
-                    <Link
-                        key={idx}
-                        href={link.url}
-                        dangerouslySetInnerHTML={{ __html: link.label }}
-                        style={{
-                            padding: '8px 12px',
-                            border: '1px solid var(--admin-border)',
-                            background: link.active ? 'var(--admin-primary)' : 'white',
-                            color: link.active ? 'white' : 'var(--admin-text-main)',
-                            borderRadius: '6px',
-                            textDecoration: 'none',
-                            pointerEvents: link.url ? 'auto' : 'none',
-                            opacity: link.url ? 1 : 0.5
-                        }}
-                    />
-                ))}
+                {movimientos.links && movimientos.links.map((link, idx) => {
+                    if (!link.url) {
+                        return (
+                            <span
+                                key={idx}
+                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: '1px solid var(--admin-border)',
+                                    background: 'white',
+                                    color: 'var(--admin-text-main)',
+                                    borderRadius: '6px',
+                                    pointerEvents: 'none',
+                                    opacity: 0.5
+                                }}
+                            />
+                        );
+                    }
+                    return (
+                        <Link
+                            key={idx}
+                            href={link.url}
+                            dangerouslySetInnerHTML={{ __html: link.label }}
+                            style={{
+                                padding: '8px 12px',
+                                border: '1px solid var(--admin-border)',
+                                background: link.active ? 'var(--admin-primary)' : 'white',
+                                color: link.active ? 'white' : 'var(--admin-text-main)',
+                                borderRadius: '6px',
+                                textDecoration: 'none'
+                            }}
+                        />
+                    );
+                })}
             </div>
 
         </AdminLayout>

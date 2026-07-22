@@ -84,7 +84,7 @@ class StripePaymentController extends Controller
                 $costoEnvio = (float) \App\Models\ConfiguracionSitio::obtener('envio_tarifa_plana', 15);
             }
 
-            $totalConDescuento = max(0, $total - $descuentoMonto) + $shippingCost;
+            $totalConDescuento = max(0, $total - $descuentoMonto) + $costoEnvio;
 
             // Prevenir montos menores a $0.50 USD (o S/ 2.00 PEN) en Stripe
             if ($totalConDescuento < 2.00) {
@@ -120,7 +120,7 @@ class StripePaymentController extends Controller
 
             $codigoPedido = session('checkout_pedido');
             if (!$codigoPedido) {
-                $codigoPedido = 'PED-' . rand(10000000, 99999999);
+                $codigoPedido = 'PED-' . date('ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(6));
             }
             
             // Crear o actualizar Pedido en estado Pendiente
@@ -355,67 +355,30 @@ class StripePaymentController extends Controller
                         }
 
                         $pedido->update(['estado' => 'Pagado']);
-                        
-                        $items = \DB::table('pedido_item')->where('pedido_id', $pedido->id)->get();
-                        foreach ($items as $item) {
-                            if ($item->variante_id) {
-                                $variante = \App\Models\Variante::lockForUpdate()->find($item->variante_id);
-                                if ($variante) {
-                                    $almacenEcommerceId = (int) \App\Models\ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
-                                    
-                                    $stockAlmacen = \Illuminate\Support\Facades\DB::table('stock_almacen')
-                                        ->where('variante_id', $item->variante_id)
-                                        ->where('almacen_id', $almacenEcommerceId)
-                                        ->first();
-                    
-                                    if ($stockAlmacen) {
-                                        \Illuminate\Support\Facades\DB::table('stock_almacen')->where('id', $stockAlmacen->id)->decrement('cantidad', $item->cantidad);
-                                    } else {
-                                        \Illuminate\Support\Facades\DB::table('stock_almacen')->insert([
-                                            'almacen_id' => $almacenEcommerceId,
-                                            'variante_id' => $item->variante_id,
-                                            'cantidad' => 0 - $item->cantidad,
-                                            'created_at' => now(),
-                                            'updated_at' => now(),
-                                        ]);
-                                    }
-                    
-                                    \Illuminate\Support\Facades\DB::statement("UPDATE variante SET stock = (SELECT COALESCE(SUM(cantidad), 0) FROM stock_almacen WHERE variante_id = ?) WHERE id = ?", [$item->variante_id, $item->variante_id]);
 
-                                    \Illuminate\Support\Facades\DB::table('movimientos_almacen')->insert([
-                                        'almacen_id' => $almacenEcommerceId,
-                                        'variante_id' => $item->variante_id,
-                                        'tipo' => 'salida',
-                                        'cantidad' => -$item->cantidad,
-                                        'referencia' => 'Venta Ecommerce Stripe (Success) - ' . $pedido->codigo,
-                                        'usuario_id' => $pedido->usuario_id ?? 1,
-                                        'created_at' => now(),
-                                        'updated_at' => now(),
-                                    ]);
-                                }
-                            }
-                        }
+                        // La reducción de stock ha sido delegada completamente al webhook (webhook())
+                        // para evitar race conditions y descuentos dobles.
                         
                         \App\Models\ReservaStock::where('session_id', session()->getId())->delete();
-                        return null; // Todo OK
+                        return true; // We changed state
                     }
-                    return null; // Ya estaba pagado
+                    return false; // Already paid
                 });
                 
-                if ($errorResponse) {
+                if ($errorResponse === true) {
+                    // Nosotros cambiamos el estado, enviamos correos
+                    $correoDestino = session('checkout_email') ?: ($usuario ? $usuario->email : null);
+                    if ($correoDestino) {
+                        \App\Jobs\SendOrderConfirmationJob::dispatch($pedido->id, $correoDestino);
+                    }
+                    if ($usuario && !empty($usuario->telefono)) {
+                        $mensaje = "¡Hola {$usuario->nombres}! Tu pedido {$pedido->codigo} ha sido confirmado por un total de S/ {$pedido->total}. ¡Gracias por comprar en NOVAPE!";
+                        \App\Jobs\SendWhatsAppNotification::dispatch($usuario->telefono, $mensaje);
+                    }
+                } elseif (is_string($errorResponse) || is_object($errorResponse)) {
+                    // It returned an error redirect response
                     return $errorResponse;
                 }
-            }
-
-
-            // Despachar el Job para envío de correos asíncrono
-            $correoDestino = session('checkout_email') ?: ($usuario ? $usuario->email : null);
-            \App\Jobs\SendOrderConfirmationJob::dispatch($pedido->id, $correoDestino);
-            
-            // Despachar notificación por WhatsApp
-            if ($usuario && !empty($usuario->telefono)) {
-                $mensaje = "¡Hola {$usuario->nombres}! Tu pedido {$pedido->codigo} ha sido confirmado por un total de S/ {$pedido->total}. ¡Gracias por comprar en NOVAPE!";
-                \App\Jobs\SendWhatsAppNotification::dispatch($usuario->telefono, $mensaje);
             }
         }
         
