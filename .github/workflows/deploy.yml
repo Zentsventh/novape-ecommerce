@@ -1,4 +1,4 @@
-name: Deploy to cPanel via FTP
+name: Deploy to cPanel
 
 on:
   push:
@@ -31,25 +31,59 @@ jobs:
         npm install
         npm run build
 
-    - name: Preparar carpetas para la doble subida (cPanel)
+    - name: Preparar carpetas para el despliegue
       run: |
         mkdir -p deploy_root
         mkdir -p deploy_public
         
-        # Copiar todo (excluyendo basura y excluyendo vendor porque ya está en el servidor)
-        rsync -a --exclude='.git' --exclude='.github' --exclude='deploy_root' --exclude='deploy_public' --exclude='node_modules' --exclude='tests' --exclude='vendor' ./ deploy_root/
+        # Copiar código (sin vendor, node_modules, git, tests ni archivos temporales)
+        rsync -a \
+          --exclude='.git' \
+          --exclude='.github' \
+          --exclude='deploy_root' \
+          --exclude='deploy_public' \
+          --exclude='node_modules' \
+          --exclude='tests' \
+          --exclude='vendor' \
+          --exclude='*.zip' \
+          --exclude='storage/logs/*' \
+          --exclude='storage/app/public/*' \
+          ./ deploy_root/
         
-        # Mover solo el contenido público a la carpeta pública temporal
-        mv deploy_root/public/* deploy_public/
+        # Separar archivos públicos (excluyendo .htaccess para no pisar la config de cPanel)
+        rsync -a --exclude='.htaccess' deploy_root/public/ deploy_public/
         rm -rf deploy_root/public
 
-    - name: 🚀 Instalar lftp
-      run: sudo apt-get update && sudo apt-get install -y lftp
-
-    - name: 🚀 Subir el cerebro de Laravel (carpeta novape)
+    - name: 🚀 Empaquetar y Desplegar
       run: |
-        lftp -c "set ftp:ssl-allow yes; set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }}; mirror -R -v --parallel=5 ./deploy_root/ ./novape/"
-
-    - name: 🚀 Subir los archivos públicos (carpeta public_html)
-      run: |
-        lftp -c "set ftp:ssl-allow yes; set ssl:verify-certificate no; open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_SERVER }}; mirror -R -v --parallel=5 ./deploy_public/ ./public_html/"
+        # Organizar en la estructura de cPanel
+        mkdir -p to_zip/novape
+        mkdir -p to_zip/public_html
+        
+        cp -r deploy_root/* to_zip/novape/
+        cp -r deploy_public/* to_zip/public_html/
+        
+        # Comprimir todo en un solo archivo
+        cd to_zip
+        zip -r -q ../deploy.zip .
+        cd ..
+        
+        echo "📦 Tamaño del paquete: $(du -h deploy.zip | cut -f1)"
+        
+        # Enviar al servidor por HTTP (sin depender de FTP)
+        RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 120 \
+          -X POST \
+          -F "deploy_file=@deploy.zip" \
+          "https://novape.me/deployer.php?key=novape_super_secreto_2026")
+        
+        HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+        BODY=$(echo "$RESPONSE" | head -1)
+        
+        echo "🌐 Respuesta del servidor: $BODY (HTTP $HTTP_CODE)"
+        
+        if [[ "$BODY" == DEPLOY_SUCCESS* ]]; then
+          echo "✅ ¡Despliegue exitoso!"
+        else
+          echo "❌ Error en el despliegue"
+          exit 1
+        fi
