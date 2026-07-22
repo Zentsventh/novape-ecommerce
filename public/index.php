@@ -23,6 +23,7 @@ if (file_exists(__DIR__.'/../novape/vendor/autoload.php')) {
 /** @var Application $app */
 if (file_exists(__DIR__.'/../novape/bootstrap/app.php')) {
     $app = require_once __DIR__.'/../novape/bootstrap/app.php'; // cPanel
+    $app->usePublicPath(__DIR__); // Le decimos a Vite que la carpeta pública ahora es public_html
 } else {
     $app = require_once __DIR__.'/../bootstrap/app.php'; // Local
 }
