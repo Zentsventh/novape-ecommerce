@@ -43,7 +43,14 @@ class GoogleAuthController extends Controller
                     'email' => $googleUser->getEmail(),
                     'password_hash' => bcrypt(Str::random(24)), // Random password
                     'google_id' => $googleUser->getId(),
+                    'has_set_password' => false,
                 ]);
+
+                // Asignar rol de cliente por defecto (ID 2 o por nombre) si existe
+                $rolCliente = \App\Models\Rol::where('nombre', 'cliente')->first();
+                if ($rolCliente) {
+                    $user->roles()->attach($rolCliente->id);
+                }
             } else {
                 // Update google_id if not set
                 if (!$user->google_id) {
@@ -107,7 +114,11 @@ class GoogleAuthController extends Controller
             }
 
             // Redirect to home/dashboard
-            return redirect()->intended('/cliente/ordenes'); // or wherever appropriate
+            $intendedUrl = session()->pull('url.intended', '/cliente/ordenes');
+            if (\Illuminate\Support\Str::contains($intendedUrl, '/admin')) {
+                $intendedUrl = '/cliente/ordenes';
+            }
+            return redirect()->to($intendedUrl);
             
         } catch (\Exception $e) {
             \Log::error('Google OAuth Error: ' . $e->getMessage());

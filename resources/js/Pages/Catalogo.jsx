@@ -7,6 +7,7 @@ import CartDrawer from '../Components/Home/CartDrawer';
 import Footer from '../Components/Home/Footer';
 import Toast from '../Components/Home/Toast';
 import QuickViewModal from '../Components/Home/QuickViewModal';
+import AddToListModal from '../Components/Home/AddToListModal';
 import { fireConfetti } from '../utils/confetti';
 import { DEFAULT_IMAGE } from '../Components/Home/constants';
 import ProductCardSkeleton from '../Components/Home/ProductCardSkeleton';

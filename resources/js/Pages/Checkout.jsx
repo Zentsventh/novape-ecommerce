@@ -6,6 +6,7 @@ import StripePaymentForm from '../Components/Home/StripePaymentForm';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import '../../css/home/checkout.css';
 
 const stripePromise = loadStripe('pk_test_51TVepVLBzrJGakQp4jrQwXP4IEj9xESBwsS0QFqj4eqouPLBrjaoVarXNQb0lC6vISU0RQDtMCpPZiLueNFiQxdB005pcaUaRH');
@@ -112,10 +113,10 @@ export default function Checkout({ cart = [], total = 0 }) {
                     }));
                 }
             } else {
-                alert('No se pudo encontrar el documento.');
+                Swal.fire({text: 'No se pudo encontrar el documento.', icon: 'error', confirmButtonColor: '#00B4FF'});
             }
         } catch (err) {
-            alert('Error de conexión.');
+            Swal.fire({text: 'Error de conexión.', icon: 'error', confirmButtonColor: '#00B4FF'});
         } finally {
             setLoadingApiDoc(false);
         }
@@ -262,7 +263,7 @@ export default function Checkout({ cart = [], total = 0 }) {
     const handleAddressSubmit = async () => {
         // Validación estricta tradicional
         if (!addressData.nombres || !addressData.apellidos || !addressData.doc || !addressData.celular || !addressData.direccion || !addressData.distrito) {
-            alert('Por favor completa todos los campos obligatorios (*).');
+            Swal.fire({text: 'Por favor completa todos los campos obligatorios (*).', icon: 'warning', confirmButtonColor: '#00B4FF'});
             return;
         }
 
@@ -277,7 +278,7 @@ export default function Checkout({ cart = [], total = 0 }) {
                 const msg = validation.messages && validation.messages.length > 0 
                     ? validation.messages[0].text 
                     : 'La dirección ingresada no parece válida. Por favor verifica los datos.';
-                alert('Shippo Validación: ' + msg);
+                Swal.fire({text: 'Shippo Validación: ' + msg, icon: 'error', confirmButtonColor: '#00B4FF'});
                 setIsCreating(false);
                 return; // Detener si la dirección es inválida
             }

@@ -52,18 +52,6 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                     </div>
                 )}
 
-                {cart?.items?.length > 0 && (
-                    <div className="efe-cart-shipping-progress">
-                        {amountLeftForFreeShipping > 0 ? (
-                            <p>Te faltan <strong>S/ {formatPrice(amountLeftForFreeShipping)}</strong> para <strong>Envío Gratis</strong></p>
-                        ) : (
-                            <p>¡Felicidades! Tienes <strong>Envío Gratis</strong></p>
-                        )}
-                        <div className="efe-progress-bar-container">
-                            <div className="efe-progress-bar-fill" style={{ width: `${progressPercentage}%` }}></div>
-                        </div>
-                    </div>
-                )}
 
                 <div className="efe-cart-body">
                     {!cart?.items?.length ? (

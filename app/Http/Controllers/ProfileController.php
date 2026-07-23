@@ -24,6 +24,18 @@ class ProfileController extends Controller
         $sesiones = \DB::table('sessions')->where('user_id', $usuario->id)->orderBy('last_activity', 'desc')->get();
         $tab = $request->query('tab', 'home');
 
+        $categoriaProductos = \Illuminate\Support\Facades\Cache::remember('home_categorias', 3600, function () {
+            return \App\Models\Categoria::whereNull('categoria_padre_id')
+                ->where(function ($q) {
+                    $q->whereNotIn('slug', ['cyber-bombas', 'retiro-inmediato'])->orWhereNull('slug');
+                })
+                ->with(['subcategorias', 'productos' => function ($query) {
+                    $query->where('producto.activo', 1)
+                          ->with(['marca', 'variantes', 'imagenes']);
+                }])
+                ->get();
+        });
+
         return Inertia::render('Auth/Profile', [
             'usuario' => $usuario,
             'pedidos' => $pedidos,
@@ -33,6 +45,7 @@ class ProfileController extends Controller
             'listas' => $listas,
             'sesiones' => $sesiones,
             'activeTabParam' => $tab,
+            'categoriaProductos' => $categoriaProductos,
         ]);
     }
 
@@ -118,17 +131,33 @@ class ProfileController extends Controller
     {
         $usuario = Auth::user();
 
-        $request->validate([
-            'current_password' => 'required',
-            'password' => 'required|min:8|confirmed',
+        $rules = [
+            'password' => [
+                'required',
+                'min:8',
+                'regex:/[a-z]/',      // Al menos una minúscula
+                'regex:/[A-Z]/',      // Al menos una mayúscula
+                'regex:/[0-9]/',      // Al menos un número
+                'regex:/[@$!%*#?&]/', // Al menos un símbolo
+                'confirmed'
+            ],
+        ];
+
+        if ($usuario->has_set_password) {
+            $rules['current_password'] = 'required';
+        }
+
+        $request->validate($rules, [
+            'password.regex' => 'La contraseña debe contener al menos una mayúscula, una minúscula, un número y un símbolo especial (@$!%*#?&).'
         ]);
 
-        if (! \Hash::check($request->current_password, $usuario->password_hash)) {
+        if ($usuario->has_set_password && ! \Hash::check($request->current_password, $usuario->password_hash)) {
             return back()->withErrors(['current_password' => 'La contraseña actual no es correcta.']);
         }
 
         $usuario->update([
             'password_hash' => bcrypt($request->password),
+            'has_set_password' => true,
         ]);
 
         return back()->with('success', 'Tu contraseña se ha actualizado correctamente.');

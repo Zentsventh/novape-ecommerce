@@ -1,6 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import ChatBot from './Components/Home/ChatBot';
+import { ConfirmProvider } from '@/Contexts/ConfirmContext';
 import '../css/home/chatbot.css';
 
 /* Wrapper global que muestra el ChatBot en páginas públicas (no admin). */
@@ -8,10 +9,10 @@ function GlobalLayout({ children, pageName = '' }) {
     const isAdmin = typeof pageName === 'string' && (pageName.startsWith('Admin/') || pageName.startsWith('Auth/'));
 
     return (
-        <>
+        <ConfirmProvider>
             {children}
             {!isAdmin && <ChatBot />}
-        </>
+        </ConfirmProvider>
     );
 }
 

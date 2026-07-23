@@ -52,7 +52,6 @@ class ListaDeseoController extends Controller
     {
         $usuario = \Auth::user();
         
-        // Find the item only if it belongs to a list owned by the user
         $item = \App\Models\UsuarioListaItem::whereHas('lista', function($q) use ($usuario) {
             $q->where('usuario_id', $usuario->id);
         })->findOrFail($id);
@@ -60,5 +59,78 @@ class ListaDeseoController extends Controller
         $item->delete();
 
         return back()->with('success', 'Producto eliminado de la lista.');
+    }
+
+    public function getLists()
+    {
+        $usuario = \Auth::user();
+        if (!$usuario) return response()->json([]);
+
+        $listas = $usuario->listas()->with('items')->get();
+        return response()->json($listas);
+    }
+
+    public function syncWishlists(Request $request)
+    {
+        $request->validate([
+            'producto_id' => 'required|exists:producto,id',
+            'lista_ids' => 'array',
+            'lista_ids.*' => 'exists:usuario_listas,id'
+        ]);
+
+        $usuario = \Auth::user();
+        $producto_id = $request->producto_id;
+        $nuevas_listas_ids = $request->lista_ids ?? [];
+
+        // Obtener todas las listas del usuario
+        $mis_listas = $usuario->listas()->pluck('id')->toArray();
+
+        // Eliminar el producto de las listas no seleccionadas, y agregarlo a las seleccionadas
+        foreach ($mis_listas as $lista_id) {
+            $lista = $usuario->listas()->find($lista_id);
+            if (!$lista) continue;
+
+            $item = $lista->items()->where('producto_id', $producto_id)->first();
+            $debe_estar = in_array($lista_id, $nuevas_listas_ids);
+
+            if ($debe_estar && !$item) {
+                $lista->items()->create(['producto_id' => $producto_id]);
+            } elseif (!$debe_estar && $item) {
+                $item->delete();
+            }
+        }
+
+        return back()->with('success', 'Listas guardadas exitosamente.');
+    }
+
+    public function toggleWishlist(Request $request)
+    {
+        $request->validate([
+            'producto_id' => 'required|exists:producto,id',
+            'lista_id' => 'nullable|exists:usuario_listas,id'
+        ]);
+        $usuario = \Auth::user();
+        
+        $lista = null;
+        if ($request->lista_id) {
+            $lista = $usuario->listas()->findOrFail($request->lista_id);
+        } else {
+            $lista = $usuario->listas()->first();
+            if (!$lista) {
+                $lista = $usuario->listas()->create([
+                    'nombre' => 'Mis Favoritos',
+                    'es_publica' => false
+                ]);
+            }
+        }
+        
+        $item = $lista->items()->where('producto_id', $request->producto_id)->first();
+        if ($item) {
+            $item->delete();
+            return back()->with('success', 'Producto removido de tus listas.');
+        } else {
+            $lista->items()->create(['producto_id' => $request->producto_id]);
+            return back()->with('success', 'Producto agregado a tu lista.');
+        }
     }
 }

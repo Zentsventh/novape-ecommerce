@@ -2,10 +2,14 @@ import React from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function CompraShow({ compra, items, logoUrl }) {
-    const handleCompletar = () => {
-        if (confirm('¿Estás seguro de completar esta compra? Esto añadirá el stock al inventario y actualizará los costos.')) {
+    const confirmDialog = useConfirm();
+
+    const handleCompletar = async () => {
+        if (await confirmDialog('¿Estás seguro de completar esta compra? Esto añadirá el stock al inventario y actualizará los costos.')) {
             router.post(`/admin/compras/${compra.id}/completar`, {}, { preserveScroll: true });
         }
     };

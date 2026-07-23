@@ -8,6 +8,7 @@ import CategoryNavBar from '../Components/Home/CategoryNavBar';
 import CategoryDrawer from '../Components/Home/CategoryDrawer';
 import Footer from '../Components/Home/Footer';
 import LoginModal from '../Components/Home/LoginModal';
+import AddToListModal from '../Components/Home/AddToListModal';
 import { DEFAULT_IMAGE } from '../Components/Home/constants';
 
 /* Estilos */
@@ -28,6 +29,7 @@ export default function Producto() {
     const [isCatOpen, setIsCatOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isLoginOpen, setIsLoginOpen] = useState(false);
+    const [isListModalOpen, setIsListModalOpen] = useState(false);
     const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
     const [isZooming, setIsZooming] = useState(false);
 
@@ -208,23 +210,23 @@ export default function Producto() {
                                 onMouseMove={handleMouseMove}
                                 onMouseEnter={() => setIsZooming(true)}
                                 onMouseLeave={() => setIsZooming(false)}
-                                style={{
-                                    width: '100%',
-                                    height: '500px',
-                                    backgroundColor: '#fff',
-                                    backgroundImage: `url(${activeImage})`,
+                                style={{ 
+                                    width: '100%', 
+                                    height: '500px', 
+                                    position: 'relative',
+                                    backgroundImage: `url(${activeImage || DEFAULT_IMAGE})`,
                                     backgroundPosition: isZooming ? `${zoomPos.x}% ${zoomPos.y}%` : 'center',
-                                    backgroundSize: isZooming ? '200%' : 'contain',
+                                    backgroundSize: isZooming ? '140%' : 'contain',
                                     backgroundRepeat: 'no-repeat',
-                                    cursor: isZooming ? 'zoom-in' : 'pointer',
-                                    transition: 'background-size 0.2s ease-in-out',
-                                    borderRadius: '8px'
+                                    cursor: 'crosshair',
+                                    borderRadius: '12px',
+                                    transition: 'background-size 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                                 }}
                             >
                                 <img 
-                                    src={activeImage} 
-                                    alt={producto?.nombre} 
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: isZooming ? 0 : 1, transition: 'opacity 0.2s' }} 
+                                    src={activeImage || DEFAULT_IMAGE} 
+                                    alt={producto.nombre} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: isZooming ? 0 : 1, transition: 'opacity 0.4s ease' }} 
                                 />
                             </div>
                             <div className="efe-producto-image-hint" style={{ marginTop: '10px' }}>
@@ -346,14 +348,27 @@ export default function Producto() {
                                 Sin stock
                             </button>
                         )}
+                        
+                        <div style={{ marginTop: '15px' }}>
+                            <button 
+                                onClick={() => {
+                                    if (auth?.user) {
+                                        setIsListModalOpen(true);
+                                    } else {
+                                        router.get('/login');
+                                    }
+                                }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#64748b', fontSize: '14px', fontWeight: '500', cursor: 'pointer', padding: '5px 0' }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                                </svg>
+                                Agregar a Mis listas
+                            </button>
+                        </div>
 
                         <div className="efe-producto-delivery">
-                            <div className="efe-delivery-promo">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" strokeWidth="2">
-                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                                </svg>
-                                Disponible para retiro en tiendas Efe y La Curacao <strong>GRATIS</strong>
-                            </div>
+
                             <div className="efe-delivery-types">
                                 <h4>Tipo de entrega</h4>
                                 <div className="efe-delivery-option">
@@ -364,11 +379,20 @@ export default function Producto() {
                                         <circle cx="18.5" cy="18.5" r="2.5" />
                                     </svg>
                                     Envío a domicilio
-                                    <svg className="efe-delivery-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
+                                    {producto?.envio_domicilio ? (
+                                        <svg className="efe-delivery-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3" style={{ marginLeft: 'auto' }}>
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    )}
                                 </div>
-                                <div style={{fontSize: '11px', color: '#22c55e', marginLeft: '30px', marginBottom: '10px'}}>Disponible</div>
+                                <div style={{fontSize: '11px', color: producto?.envio_domicilio ? '#22c55e' : '#ef4444', marginLeft: '30px', marginBottom: '10px'}}>
+                                    {producto?.envio_domicilio ? 'Disponible' : 'No disponible'}
+                                </div>
                                 
                                 <div className="efe-delivery-option">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5">
@@ -376,11 +400,20 @@ export default function Producto() {
                                         <polyline points="9 22 9 12 15 12 15 22" />
                                     </svg>
                                     Retiro en tienda
-                                    <svg className="efe-delivery-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                                        <polyline points="20 6 9 17 4 12" />
-                                    </svg>
+                                    {producto?.retiro_tienda ? (
+                                        <svg className="efe-delivery-check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="3" style={{ marginLeft: 'auto' }}>
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    )}
                                 </div>
-                                <div style={{fontSize: '11px', color: '#22c55e', marginLeft: '30px'}}>Disponible</div>
+                                <div style={{fontSize: '11px', color: producto?.retiro_tienda ? '#22c55e' : '#ef4444', marginLeft: '30px'}}>
+                                    {producto?.retiro_tienda ? 'Disponible' : 'No disponible'}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -445,41 +478,76 @@ export default function Producto() {
 
             {/* Frecuentemente comprados juntos */}
             {recomendados && recomendados.length > 0 && (
-                <div style={{ maxWidth: '1200px', margin: '40px auto 20px', padding: '0 20px' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--color-text-title)' }}>Comprados frecuentemente juntos</h2>
+                <div style={{ maxWidth: '1200px', margin: '50px auto 30px', padding: '0 20px' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px', color: '#1e293b' }}>Comprados frecuentemente juntos</h2>
                     
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', backgroundColor: 'var(--color-bg-light)', padding: '24px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '30px', backgroundColor: '#ffffff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0, 180, 255, 0.08)', border: '1px solid rgba(0, 180, 255, 0.15)' }}>
                         {/* Producto Principal */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '150px' }}>
-                            <img src={producto.imagen || DEFAULT_IMAGE} alt={producto.nombre} style={{ width: '120px', height: '120px', objectFit: 'contain', marginBottom: '10px', backgroundColor: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
-                            <span style={{ fontSize: '12px', textAlign: 'center', fontWeight: '500', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{producto.nombre}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '160px', position: 'relative' }}>
+                            <div style={{ width: '100%', aspectRatio: '1', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                                <img src={producto.imagen || DEFAULT_IMAGE} alt={producto.nombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            </div>
+                            <span style={{ fontSize: '13px', textAlign: 'center', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{producto.nombre}</span>
                         </div>
                         
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#94a3b8' }}>+</div>
+                        <div style={{ fontSize: '28px', fontWeight: '300', color: '#00B4FF' }}>+</div>
                         
                         {/* Producto Recomendado (Primer elemento) */}
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '150px' }}>
-                            <Link href={`/producto/${recomendados[0].id}`}>
-                                <img src={recomendados[0].imagen || DEFAULT_IMAGE} alt={recomendados[0].nombre} style={{ width: '120px', height: '120px', objectFit: 'contain', marginBottom: '10px', backgroundColor: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0', transition: 'transform 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={(e) => e.currentTarget.style.transform='none'} />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '160px', position: 'relative' }}>
+                            <Link href={`/producto/${recomendados[0].id}`} style={{ width: '100%', aspectRatio: '1', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '12px', transition: 'all 0.3s ease', textDecoration: 'none' }} onMouseEnter={(e) => {e.currentTarget.style.borderColor = '#00B4FF'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 180, 255, 0.15)';}} onMouseLeave={(e) => {e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = 'none';}}>
+                                <img src={recomendados[0].imagen || DEFAULT_IMAGE} alt={recomendados[0].nombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                             </Link>
-                            <Link href={`/producto/${recomendados[0].id}`} style={{ fontSize: '12px', textAlign: 'center', fontWeight: '500', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', color: 'var(--color-text-main)', textDecoration: 'none' }}>{recomendados[0].nombre}</Link>
+                            <Link href={`/producto/${recomendados[0].id}`} style={{ fontSize: '13px', textAlign: 'center', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#00B4FF'} onMouseLeave={(e) => e.currentTarget.style.color = '#334155'}>{recomendados[0].nombre}</Link>
                         </div>
                         
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#94a3b8' }}>=</div>
+                        <div style={{ fontSize: '28px', fontWeight: '300', color: '#00B4FF' }}>=</div>
                         
                         {/* Total y Botón */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginLeft: 'auto', minWidth: '200px' }}>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                <span style={{ fontSize: '14px', color: 'var(--color-text-main)' }}>Precio total:</span>
-                                <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--color-primary)' }}>S/ {formatPrice((producto.precio_actual || 0) + (recomendados[0].precio_actual || 0))}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginLeft: 'auto', minWidth: '240px', padding: '20px', backgroundColor: '#f0f9ff', borderRadius: '12px', border: '1px dashed rgba(0, 180, 255, 0.4)' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Precio total del paquete</span>
+                                <span style={{ fontSize: '28px', fontWeight: '800', color: '#00B4FF' }}>S/ {formatPrice((producto.precio_actual || 0) + (recomendados[0].precio_actual || 0))}</span>
                             </div>
                             <button 
-                                className="efe-btn-cart"
                                 onClick={() => handleAddBundle(recomendados[0].id, recomendados[0].precio_actual)}
                                 disabled={isAdding}
-                                style={{ width: '100%', padding: '12px' }}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '14px 20px', 
+                                    backgroundColor: '#00B4FF', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '8px', 
+                                    fontSize: '15px', 
+                                    fontWeight: '600', 
+                                    cursor: isAdding ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 4px 12px rgba(0, 180, 255, 0.3)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseEnter={(e) => { if(!isAdding) e.currentTarget.style.backgroundColor = '#0096d6'; }}
+                                onMouseLeave={(e) => { if(!isAdding) e.currentTarget.style.backgroundColor = '#00B4FF'; }}
                             >
-                                {isAdding ? 'Agregando...' : 'Agregar ambos al carrito'}
+                                {isAdding ? (
+                                    <>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{animation: 'spin 1s linear infinite'}}>
+                                            <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+                                        </svg>
+                                        Agregando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                                        </svg>
+                                        Agregar ambos al carrito
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -487,24 +555,56 @@ export default function Producto() {
             )}
 
             {recomendados && recomendados.length > 1 && (
-                <div style={{ maxWidth: '1200px', margin: '40px auto 20px', padding: '0 20px' }}>
-                    <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '20px', color: 'var(--color-text-title)' }}>Clientes también compraron</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+                <div style={{ maxWidth: '1200px', margin: '40px auto 60px', padding: '0 20px' }}>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '24px', color: '#1e293b' }}>Clientes también compraron</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '24px' }}>
                         {recomendados.map((rec) => (
-                            <Link href={`/producto/${rec.id}`} key={rec.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-                                <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', background: 'white', transition: 'box-shadow 0.2s', height: '100%', display: 'flex', flexDirection: 'column' }}
-                                     onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-                                     onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}>
-                                    <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                        <img src={rec.imagen || DEFAULT_IMAGE} alt={rec.nombre} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
+                            <Link href={`/producto/${rec.id}`} key={rec.id} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+                                <div 
+                                    style={{ 
+                                        border: '1px solid #e2e8f0', 
+                                        borderRadius: '12px', 
+                                        padding: '20px', 
+                                        background: 'white', 
+                                        transition: 'all 0.3s ease', 
+                                        height: '100%', 
+                                        display: 'flex', 
+                                        flexDirection: 'column',
+                                        position: 'relative',
+                                        overflow: 'hidden'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = '#00B4FF';
+                                        e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 180, 255, 0.1)';
+                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                    }}
+                                >
+                                    <div style={{ width: '100%', height: '180px', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '16px' }}>
+                                        <img src={rec.imagen || DEFAULT_IMAGE} alt={rec.nombre} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', transition: 'transform 0.3s ease' }} />
                                     </div>
-                                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', textTransform: 'uppercase', fontWeight: '600' }}>{rec.marca || 'GENÉRICO'}</div>
-                                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', flex: 1 }}>{rec.nombre}</div>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#dc2626' }}>S/ {formatPrice(rec.precio_actual)}</div>
-                                        {rec.descuento > 0 && (
-                                            <div style={{ fontSize: '12px', color: '#9ca3af', textDecoration: 'line-through' }}>S/ {formatPrice(rec.precio_anterior)}</div>
-                                        )}
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
+                                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                                            {rec.marca || 'S/M'}
+                                        </span>
+                                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#334155', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: '12px', lineHeight: '1.4' }}>
+                                            {rec.nombre}
+                                        </span>
+                                        
+                                        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '18px', fontWeight: '800', color: '#00B4FF' }}>S/ {formatPrice(rec.precio_actual)}</span>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#f0f9ff', display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#00B4FF' }}>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                                </svg>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </Link>
@@ -531,6 +631,12 @@ export default function Producto() {
                 isOpen={isLoginOpen} 
                 onClose={() => setIsLoginOpen(false)}
                 onSuccessCallback={() => handleBuyNow(true)}
+            />
+
+            <AddToListModal
+                isOpen={isListModalOpen}
+                onClose={() => setIsListModalOpen(false)}
+                producto={producto}
             />
         </div>
     );

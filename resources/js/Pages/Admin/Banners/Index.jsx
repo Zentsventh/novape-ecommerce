@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function BannersIndex({ banners, logoUrl }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const [editingBanner, setEditingBanner] = useState(null);
 
@@ -39,7 +43,7 @@ export default function BannersIndex({ banners, logoUrl }) {
         setShowModal(true);
     };
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         
         if (editingBanner) {
@@ -60,8 +64,8 @@ export default function BannersIndex({ banners, logoUrl }) {
         }
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de que deseas eliminar este banner permanentemente?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de que deseas eliminar este banner permanentemente?')) {
             router.delete(`/admin/banners/${id}`);
         }
     };

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function ProveedorIndex({ proveedores, filters }) {
+    const confirmDialog = useConfirm();
+
     const [search, setSearch] = useState(filters?.search || '');
 
     const handleSearch = (e) => {
@@ -10,13 +14,13 @@ export default function ProveedorIndex({ proveedores, filters }) {
         router.get('/admin/proveedores', { search, sort: filters?.sort, direction: filters?.direction }, { preserveState: true });
     };
 
-    const handleSort = (column) => {
+    const handleSort = async (column) => {
         const direction = filters?.sort === column && filters?.direction === 'asc' ? 'desc' : 'asc';
         router.get('/admin/proveedores', { search, sort: column, direction }, { preserveState: true });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de que deseas eliminar este proveedor?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de que deseas eliminar este proveedor?')) {
             router.delete(`/admin/proveedores/${id}`);
         }
     };

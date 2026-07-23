@@ -2,20 +2,24 @@ import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function ZonasIndex({ zonas, logoUrl }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const { data, setData, post, processing, reset } = useForm({
         nombre: '', descripcion: '', costo_envio: ''
     });
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         post('/admin/zonas', { onSuccess: () => { setShowModal(false); reset(); } });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Eliminar esta zona de envío?')) router.delete(`/admin/zonas/${id}`);
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Eliminar esta zona de envío?')) router.delete(`/admin/zonas/${id}`);
     };
 
     return (

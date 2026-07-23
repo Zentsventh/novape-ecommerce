@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { trabajadores, filtros, flash, errors } = usePage().props;
     const data = trabajadores?.data || [];
     
     const [search, setSearch] = useState(filtros?.buscar || '');
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
         router.get('/admin/trabajadores', { buscar: search }, { preserveState: true });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este trabajador? (Mover a la papelera)')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este trabajador? (Mover a la papelera)')) {
             router.delete(`/admin/trabajadores/${id}`, { preserveScroll: true });
         }
     };
 
-    const toggleBloqueo = (id) => {
+    const toggleBloqueo = async (id) => {
         router.post(`/admin/trabajadores/${id}/bloquear`, {}, { preserveScroll: true });
     };
 
-    const resetPassword = (id) => {
-        if (confirm('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
+    const resetPassword = async (id) => {
+        if (await confirmDialog('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
             router.post(`/admin/trabajadores/${id}/reset-password`, {}, { preserveScroll: true });
         }
     };

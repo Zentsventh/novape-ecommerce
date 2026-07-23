@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { clientes, filtros, flash, errors } = usePage().props;
     const data = clientes?.data || [];
     
     const [search, setSearch] = useState(filtros?.buscar || '');
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
         router.get('/admin/clientes', { buscar: search }, { preserveState: true });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este usuario? (Mover a la papelera)')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este usuario? (Mover a la papelera)')) {
             router.delete(`/admin/clientes/${id}`, { preserveScroll: true });
         }
     };
 
-    const toggleBloqueo = (id) => {
+    const toggleBloqueo = async (id) => {
         router.post(`/admin/clientes/${id}/bloquear`, {}, { preserveScroll: true });
     };
 
-    const resetPassword = (id) => {
-        if (confirm('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
+    const resetPassword = async (id) => {
+        if (await confirmDialog('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
             router.post(`/admin/clientes/${id}/reset-password`, {}, { preserveScroll: true });
         }
     };

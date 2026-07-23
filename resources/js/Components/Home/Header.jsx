@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { LOGO } from './constants';
 import LoginModal from './LoginModal';
+import Swal from 'sweetalert2';
 
 /* Renderiza la cabecera principal con logo, buscador y acciones. */
 export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, logoUrl, minimal = false, searchQuery = '' }) {
@@ -51,11 +52,11 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
             recognition.onerror = (event) => {
                 console.error("Speech recognition error", event.error);
                 if (event.error === 'not-allowed') {
-                    alert('Permiso de micrófono denegado. Permite el acceso al micrófono en la barra de direcciones.');
+                    Swal.fire({text: 'Permiso de micrófono denegado. Permite el acceso al micrófono en la barra de direcciones.', icon: 'warning', confirmButtonColor: '#00B4FF'});
                 } else if (event.error === 'network') {
-                    alert('Error de red: Tu navegador (como Brave) o tu Antivirus/Adblocker está bloqueando la conexión al servidor de reconocimiento de voz. Usa Chrome/Edge o desactiva los escudos de privacidad para esta función.');
+                    Swal.fire({text: 'Error de red: Tu navegador (como Brave) o tu Antivirus/Adblocker está bloqueando la conexión al servidor de reconocimiento de voz. Usa Chrome/Edge o desactiva los escudos de privacidad para esta función.', icon: 'error', confirmButtonColor: '#00B4FF'});
                 } else {
-                    alert(`El reconocimiento de voz se detuvo: ${event.error}`);
+                    Swal.fire({text: `El reconocimiento de voz se detuvo: ${event.error}`, icon: 'info', confirmButtonColor: '#00B4FF'});
                 }
                 setIsListening(false);
             };
@@ -366,7 +367,7 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                                 )}
                                 <div className="efe-dropdown-menu" role="menu">
                                     <Link href="/perfil" className="efe-dropdown-item" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>Mi cuenta</Link>
-                                    <Link href="/perfil?tab=ordenes" className="efe-dropdown-item" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>Mis órdenes</Link>
+                                    <Link href="/perfil?tab=compras" className="efe-dropdown-item" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>Mis órdenes</Link>
                                     <button type="button" onClick={handleLogout} className="efe-dropdown-item efe-dropdown-item-button" role="menuitem">Cerrar sesión</button>
                                 </div>
                             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Head, router, Link } from '@inertiajs/react';
 import Header from '../../Components/Home/Header';
 import Footer from '../../Components/Home/Footer';
+import Swal from 'sweetalert2';
 import '../../../css/home/base.css';
 import '../../../css/auth.css';
 
@@ -55,10 +56,10 @@ export default function Register({ errors }) {
                     }));
                 }
             } else {
-                alert('No se pudo encontrar el documento.');
+                Swal.fire({text: 'No se pudo encontrar el documento.', icon: 'error', confirmButtonColor: '#00B4FF'});
             }
         } catch (err) {
-            alert('Error de conexión.');
+            Swal.fire({text: 'Error de conexión.', icon: 'error', confirmButtonColor: '#00B4FF'});
         } finally {
             setLoadingApi(false);
         }

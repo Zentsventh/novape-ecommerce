@@ -1,13 +1,17 @@
 import React from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { cupones, flash } = usePage().props;
     const data = cupones?.data || [];
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este cupón?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este cupón?')) {
             router.delete(`/admin/cupones/${id}`);
         }
     };

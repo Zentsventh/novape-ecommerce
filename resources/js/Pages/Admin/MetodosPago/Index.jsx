@@ -2,20 +2,24 @@ import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function MetodosPagoIndex({ metodos, logoUrl }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const { data, setData, post, processing, reset } = useForm({
         nombre: '', detalles: '', tipo: 'digital', comision_porcentaje: '0'
     });
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         post('/admin/metodos-pago', { onSuccess: () => { setShowModal(false); reset(); } });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Eliminar este método de pago?')) router.delete(`/admin/metodos-pago/${id}`);
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Eliminar este método de pago?')) router.delete(`/admin/metodos-pago/${id}`);
     };
 
     const tipoLabel = (t) => {

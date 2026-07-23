@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { roles, filtros, flash, errors } = usePage().props;
     const data = roles?.data || [];
     
     const [search, setSearch] = useState(filtros?.buscar || '');
 
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
         router.get('/admin/roles', { buscar: search }, { preserveState: true });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este rol? Esta acción no se puede deshacer.')) {
             router.delete(`/admin/roles/${id}`, { preserveScroll: true });
         }
     };

@@ -144,7 +144,11 @@ class AuthController extends Controller
             }
 
 
-            return redirect()->intended('/');
+            $intendedUrl = session()->pull('url.intended', '/');
+            if (\Illuminate\Support\Str::contains($intendedUrl, '/admin')) {
+                $intendedUrl = '/';
+            }
+            return redirect()->to($intendedUrl);
         }
 
         return back()->withErrors([

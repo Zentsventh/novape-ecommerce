@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnaliticasController;
@@ -118,6 +120,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/perfil/cuenta', [ProfileController::class, 'destroyAccount'])->name('perfil.cuenta.destroy');
 
     // Listas de deseos múltiples
+    Route::get('/wishlist/lists', [ListaDeseoController::class, 'getLists'])->name('wishlist.lists');
+    Route::post('/wishlist/toggle', [ListaDeseoController::class, 'toggleWishlist'])->name('wishlist.toggle');
+    Route::post('/wishlist/sync', [ListaDeseoController::class, 'syncWishlists'])->name('wishlist.sync');
     Route::post('/perfil/listas', [ListaDeseoController::class, 'storeLista'])->name('perfil.listas.store');
     Route::delete('/perfil/listas/{id}', [ListaDeseoController::class, 'destroyLista'])->name('perfil.listas.destroy');
     Route::post('/perfil/listas/items', [ListaDeseoController::class, 'storeListaItem'])->name('perfil.listas.items.store');

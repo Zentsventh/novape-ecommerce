@@ -1,12 +1,16 @@
 import React from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { marcas, flash } = usePage().props;
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar esta marca? Se desvinculará de los productos correspondientes.')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar esta marca? Se desvinculará de los productos correspondientes.')) {
             router.delete(`/admin/marcas/${id}`);
         }
     };

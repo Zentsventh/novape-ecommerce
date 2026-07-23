@@ -55,8 +55,10 @@ export default function Tracking({ pedido, trackingData }) {
             
             <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px', flex: 1, width: '100%' }}>
                 <div style={{ marginBottom: '20px' }}>
-                    <Link href="/perfil?tab=ordenes" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', textDecoration: 'none', fontWeight: '500', fontSize: '14px' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    <Link href="/perfil?tab=compras" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', textDecoration: 'none', fontWeight: '500', fontSize: '14px' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
                         Volver a mis órdenes
                     </Link>
                 </div>

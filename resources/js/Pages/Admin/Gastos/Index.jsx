@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function GastosIndex({ gastos, totalGastos, logoUrl, filters = {} }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const [editingGasto, setEditingGasto] = useState(null);
     const [startDate, setStartDate] = useState(filters.start_date || '');
@@ -36,7 +40,7 @@ export default function GastosIndex({ gastos, totalGastos, logoUrl, filters = {}
         setShowModal(true);
     };
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         if (editingGasto) {
             put(`/admin/gastos/${editingGasto.id}`, {
@@ -55,8 +59,8 @@ export default function GastosIndex({ gastos, totalGastos, logoUrl, filters = {}
         }
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Eliminar este gasto?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Eliminar este gasto?')) {
             router.delete(`/admin/gastos/${id}`);
         }
     };

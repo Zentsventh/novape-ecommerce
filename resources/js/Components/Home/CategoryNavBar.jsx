@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 
 /* Iconos SVG monocromáticos para cada categoría. */
 const CategoryIcon = ({ name }) => {
@@ -84,8 +84,7 @@ export default function CategoryNavBar({ categorias, onOpenCategories, onSelectC
             onSelectCategory(cat);
             return;
         }
-        const el = document.getElementById(`cat-section-${cat.id}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        router.get('/catalogo', { categoria: cat.nombre });
     };
 
     const handleBlur = (event) => {

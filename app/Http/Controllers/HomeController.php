@@ -160,6 +160,8 @@ class HomeController extends Controller
             'descuento' => $descuento,
             'stock' => $stock,
             'categorias' => $prod->categorias ? $prod->categorias->pluck('slug')->toArray() : [],
+            'retiro_tienda' => (bool) $prod->retiro_tienda,
+            'envio_domicilio' => (bool) $prod->envio_domicilio,
         ];
     }
 
@@ -399,12 +401,23 @@ class HomeController extends Controller
         }
 
         // Obtener todas las marcas disponibles para los productos encontrados HASTA AHORA (sin el filtro de marca)
-        $productosParaMarcas = (clone $query)->get();
-        $marcasDisponibles = $productosParaMarcas->groupBy(fn($p) => $p->marca ? $p->marca->nombre : 'Sin marca')
-            ->map(fn($items, $nombre) => ['nombre' => $nombre, 'count' => $items->count()])
-            ->values()
-            ->sortByDesc('count')
-            ->values();
+        $marcaCounts = (clone $query)
+            ->withoutEagerLoads()
+            ->whereNotNull('marca_id')
+            ->select('marca_id', \DB::raw('count(*) as count'))
+            ->groupBy('marca_id')
+            ->get();
+
+        $marcasIds = $marcaCounts->pluck('marca_id')->filter()->toArray();
+        $marcas = empty($marcasIds) ? collect() : \App\Models\Marca::whereIn('id', $marcasIds)->get()->keyBy('id');
+
+        $marcasDisponibles = $marcaCounts->map(function($item) use ($marcas) {
+            $marca = $marcas->get($item->marca_id);
+            return [
+                'nombre' => $marca ? $marca->nombre : 'Sin marca',
+                'count' => $item->count
+            ];
+        })->filter(fn($m) => $m['nombre'] !== 'Sin marca')->sortByDesc('count')->values();
 
         // Filtrar por marca
         if ($marcaFilter) {

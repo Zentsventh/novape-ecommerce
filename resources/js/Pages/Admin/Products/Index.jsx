@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index({ productos, categorias, marcas, filters }) {
+    const confirmDialog = useConfirm();
+
     const { delete: destroy } = useForm();
     const [search, setSearch] = useState(filters?.search || '');
     const [categoriaId, setCategoriaId] = useState(filters?.categoria_id || '');
@@ -31,13 +35,13 @@ export default function Index({ productos, categorias, marcas, filters }) {
         router.get('/admin/products', { search, categoria_id: categoriaId, marca_id: marcaId, sort: field, direction }, { preserveState: true });
     };
 
-    const getSortIndicator = (field) => {
+    const getSortIndicator = async (field) => {
         if (filters?.sort !== field) return null;
         return filters?.direction === 'asc' ? ' ↑' : ' ↓';
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de que quieres eliminar este producto?')) {
             destroy(`/admin/products/${id}`);
         }
     };

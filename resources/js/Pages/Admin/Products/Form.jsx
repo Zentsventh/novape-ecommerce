@@ -2,8 +2,12 @@ import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import axios from 'axios';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Form({ producto, marcas, categorias, proveedores, listaEspecificaciones = [] }) {
+    const confirmDialog = useConfirm();
+
     const isEditing = !!producto;
     
     const precioActual = producto?.variantes?.[0]?.precio || '';
@@ -45,7 +49,7 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
     const [newCatPadreId, setNewCatPadreId] = useState('');
     const [isSavingCat, setIsSavingCat] = useState(false);
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         // Filtrar imagenes vacias o nulas
         const currentImages = data.imagenes.filter(img => img !== null && img !== '');
@@ -63,10 +67,10 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
         imagenes: data.imagenes ? data.imagenes.filter(img => img !== null && img !== '') : []
     }));
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!confirm(isEditing ? '¿Estás seguro de que quieres actualizar este producto?' : '¿Estás seguro de que quieres crear este producto?')) {
+        if (!await confirmDialog(isEditing ? '¿Estás seguro de que quieres actualizar este producto?' : '¿Estás seguro de que quieres crear este producto?')) {
             return;
         }
 

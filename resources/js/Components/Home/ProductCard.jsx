@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { DEFAULT_IMAGE } from './constants';
 import { fireConfetti } from '../../utils/confetti';
 
@@ -14,6 +14,7 @@ export default function ProductCard({ product }) {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const [isHovering, setIsHovering] = useState(false);
     
+    const { auth } = usePage().props;
     const isBombaCyber = product.categorias && product.categorias.includes('cyber-bombas');
     const isRetiroInmediato = product.categorias && product.categorias.includes('retiro-inmediato');
     
@@ -60,10 +61,14 @@ export default function ProductCard({ product }) {
             <button 
                 onClick={(e) => {
                     e.preventDefault();
-                    router.post('/wishlist/toggle', { producto_id: product.id }, { preserveScroll: true });
+                    if (auth?.user) {
+                        window.dispatchEvent(new CustomEvent('open-list-modal', { detail: product }));
+                    } else {
+                        router.get('/login');
+                    }
                 }}
                 className="efe-product-wishlist-btn"
-                title="Añadir a Wishlist"
+                title="Añadir a Mis listas"
             >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>

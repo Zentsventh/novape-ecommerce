@@ -10,10 +10,13 @@ class Comprobante extends Model
 
     protected $fillable = [
         'pedido_id',
+        'tipo_comprobante',
         'tipo',
         'serie',
         'numero',
         'codigo_ticket',
+        'enlace_pdf',
+        'enlace_xml',
         'ruta_pdf',
         'ruta_xml',
         'estado_sunat',
@@ -24,6 +27,7 @@ class Comprobante extends Model
         'cliente_nombre',
         'cliente_documento',
         'cliente_tipo_documento',
+        'fecha_emision',
         'emitido_at',
     ];
 

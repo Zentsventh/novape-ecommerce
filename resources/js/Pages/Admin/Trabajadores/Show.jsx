@@ -1,23 +1,27 @@
 import React from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Show({ trabajador, totalCompras, totalPedidos }) {
+    const confirmDialog = useConfirm();
+
     const { flash, errors } = usePage().props;
     const cliente = trabajador; // Reusing variable names for the rest of the template
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este trabajador? (Mover a la papelera)')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este trabajador? (Mover a la papelera)')) {
             router.delete(`/admin/trabajadores/${id}`, { preserveScroll: true });
         }
     };
 
-    const toggleBloqueo = (id) => {
+    const toggleBloqueo = async (id) => {
         router.post(`/admin/trabajadores/${id}/bloquear`, {}, { preserveScroll: true });
     };
 
-    const resetPassword = (id) => {
-        if (confirm('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
+    const resetPassword = async (id) => {
+        if (await confirmDialog('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
             router.post(`/admin/trabajadores/${id}/reset-password`, {}, { preserveScroll: true });
         }
     };

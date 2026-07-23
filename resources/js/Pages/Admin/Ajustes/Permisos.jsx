@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Head, usePage, router, useForm } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Permisos({ roles, permisos }) {
+    const confirmDialog = useConfirm();
+
     const { flash } = usePage().props;
     const [selectedRole, setSelectedRole] = useState(roles.length > 0 ? roles[0].id : null);
     
@@ -21,7 +25,7 @@ export default function Permisos({ roles, permisos }) {
     });
     const [showNewRoleForm, setShowNewRoleForm] = useState(false);
 
-    const submitNewRole = (e) => {
+    const submitNewRole = async (e) => {
         e.preventDefault();
         postRole('/admin/ajustes/roles', {
             preserveScroll: true,
@@ -32,9 +36,9 @@ export default function Permisos({ roles, permisos }) {
         });
     };
 
-    const deleteRole = (id, nombre) => {
+    const deleteRole = async (id, nombre) => {
         if (nombre === 'admin') return;
-        if (confirm(`¿Estás seguro de eliminar el rol "${nombre}"? Los usuarios que lo tengan podrían perder accesos si no se reasignan.`)) {
+        if (await confirmDialog(`¿Estás seguro de eliminar el rol "${nombre}"? Los usuarios que lo tengan podrían perder accesos si no se reasignan.`)) {
             router.delete(`/admin/ajustes/roles/${id}`, { 
                 preserveScroll: true,
                 onSuccess: () => {

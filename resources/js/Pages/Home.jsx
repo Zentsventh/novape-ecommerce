@@ -15,6 +15,7 @@ import Toast from '../Components/Home/Toast';
 import RecentlyViewed from '../Components/Home/RecentlyViewed';
 // Banners removed as per user request
 import QuickViewModal from '../Components/Home/QuickViewModal';
+import AddToListModal from '../Components/Home/AddToListModal';
 import { router } from '@inertiajs/react';
 
 /* Estilos del Home */
@@ -38,6 +39,8 @@ export default function Home({ appName, categoriaProductos = [], mejorSemana = [
     const [quickViewProduct, setQuickViewProduct] = useState(null);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
     const [addingIds, setAddingIds] = useState({});
+    const [isListModalOpen, setIsListModalOpen] = useState(false);
+    const [listModalProduct, setListModalProduct] = useState(null);
 
     const { cart, flash } = usePage().props;
     const hasCategorias = Array.isArray(categoriaProductos) && categoriaProductos.length > 0;
@@ -50,13 +53,19 @@ export default function Home({ appName, categoriaProductos = [], mejorSemana = [
             setQuickViewProduct(e.detail);
             setIsQuickViewOpen(true);
         };
+        const handleOpenListModal = (e) => {
+            setListModalProduct(e.detail);
+            setIsListModalOpen(true);
+        };
         
         window.addEventListener('open-cart', handleOpenCart);
         window.addEventListener('open-quick-view', handleOpenQuickView);
+        window.addEventListener('open-list-modal', handleOpenListModal);
         
         return () => {
             window.removeEventListener('open-cart', handleOpenCart);
             window.removeEventListener('open-quick-view', handleOpenQuickView);
+            window.removeEventListener('open-list-modal', handleOpenListModal);
         };
     }, []);
 

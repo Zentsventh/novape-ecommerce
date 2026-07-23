@@ -79,7 +79,7 @@ export default function OrderDetails({ pedido }) {
                                 </span>
                             </div>
                             <div style={{ fontSize: '13px', color: '#64748b' }}>
-                                Realizado el {new Date(pedido.created_at).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                Realizado el {new Date(pedido.created_at).toLocaleString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '12px' }}>

@@ -12,6 +12,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+    <!-- Scripts -->
+    @routes
+    <script>
+        window.addEventListener('error', function(event) {
+            fetch('/api/log-frontend-error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: event.message, stack: event.error ? event.error.stack : null })
+            });
+        });
+        window.addEventListener('unhandledrejection', function(event) {
+            fetch('/api/log-frontend-error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: event.reason, stack: event.reason ? event.reason.stack : null })
+            });
+        });
+    </script>
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     @inertiaHead

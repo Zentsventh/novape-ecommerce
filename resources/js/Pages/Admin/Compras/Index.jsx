@@ -2,8 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function ComprasIndex({ compras, totalGastado, comprasPendientes, proveedores, productos, categorias, marcas, historialProducto, filters, logoUrl }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const [items, setItems] = useState([{ producto_id: '', variante_id: '', cantidad: 1, costo_unitario: '' }]);
     const { data, setData, post, processing, reset } = useForm({
@@ -64,7 +68,7 @@ export default function ComprasIndex({ compras, totalGastado, comprasPendientes,
 
     const totalOrden = items.reduce((s, i) => s + (parseFloat(i.costo_unitario || 0) * parseInt(i.cantidad || 0)), 0);
 
-    const submit = (e) => {
+    const submit = async (e) => {
         e.preventDefault();
         router.post('/admin/compras', {
             proveedor_id: data.proveedor_id,
@@ -84,8 +88,8 @@ export default function ComprasIndex({ compras, totalGastado, comprasPendientes,
         });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Eliminar esta orden de compra y todos sus items?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Eliminar esta orden de compra y todos sus items?')) {
             router.delete(`/admin/compras/${id}`);
         }
     };

@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Show({ cliente, totalCompras, totalPedidos }) {
+    const confirmDialog = useConfirm();
+
     const { flash, errors } = usePage().props;
     const [notaText, setNotaText] = useState('');
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este usuario? (Mover a la papelera)')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este usuario? (Mover a la papelera)')) {
             router.delete(`/admin/clientes/${id}`, { preserveScroll: true });
         }
     };
 
-    const toggleBloqueo = (id) => {
+    const toggleBloqueo = async (id) => {
         router.post(`/admin/clientes/${id}/bloquear`, {}, { preserveScroll: true });
     };
 
-    const resetPassword = (id) => {
-        if (confirm('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
+    const resetPassword = async (id) => {
+        if (await confirmDialog('¿Estás seguro de restablecer la contraseña a Novape2026!?')) {
             router.post(`/admin/clientes/${id}/reset-password`, {}, { preserveScroll: true });
         }
     };
 
-    const handleAddNota = (e) => {
+    const handleAddNota = async (e) => {
         e.preventDefault();
         if (!notaText.trim()) return;
         router.post(`/admin/clientes/${cliente.id}/notas`, { nota: notaText }, {
@@ -31,8 +35,8 @@ export default function Show({ cliente, totalCompras, totalPedidos }) {
         });
     };
 
-    const handleDeleteNota = (notaId) => {
-        if (confirm('¿Eliminar esta nota?')) {
+    const handleDeleteNota = async (notaId) => {
+        if (await confirmDialog('¿Eliminar esta nota?')) {
             router.delete(`/admin/clientes/${cliente.id}/notas/${notaId}`, {
                 preserveScroll: true
             });

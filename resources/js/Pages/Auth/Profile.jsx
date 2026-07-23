@@ -1,16 +1,27 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Head, router, usePage, Link, useForm } from '@inertiajs/react';
 import Header from '../../Components/Home/Header';
+import CategoryNavBar from '../../Components/Home/CategoryNavBar';
+import CategoryDrawer from '../../Components/Home/CategoryDrawer';
+import CartDrawer from '../../Components/Home/CartDrawer';
+import Toast from '../../Components/Home/Toast';
 import Footer from '../../Components/Home/Footer';
 import '../../../css/home/base.css';
 import ubigeoData from 'ubigeo-peru';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 const ubigeo = ubigeoData.reniec;
 
-export default function Profile({ usuario = {}, pedidos = [], direcciones = [], tarjetas = [], datosReembolso = null, listas = [], sesiones = [], activeTabParam = 'home' }) {
-    const { auth, flash, errors: pageErrors } = usePage().props;
+export default function Profile({ usuario = {}, pedidos = [], direcciones = [], tarjetas = [], datosReembolso = null, listas = [], sesiones = [], activeTabParam = 'home', categoriaProductos = [] }) {
+    const confirmDialog = useConfirm();
+
+    const { auth, flash, errors: pageErrors, cart } = usePage().props;
     const user = auth?.user || usuario;
-    const [currentView, setCurrentView] = useState(activeTabParam);
+    const [currentView, setCurrentView] = useState(activeTabParam === 'ordenes' ? 'compras' : activeTabParam);
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [isCatOpen, setIsCatOpen] = useState(false);
+
     
     // Modals state
     const [showEditProfile, setShowEditProfile] = useState(false);
@@ -18,6 +29,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
     const [showAddTarjeta, setShowAddTarjeta] = useState(false);
     const [showDeleteAccount, setShowDeleteAccount] = useState(false);
     const [showAddLista, setShowAddLista] = useState(false);
+    const [selectedList, setSelectedList] = useState(null);
+    const [selectedItems, setSelectedItems] = useState({});
     const [showEditPassword, setShowEditPassword] = useState(false);
 
     // Form for profile
@@ -61,6 +74,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
     const [showEditPhone, setShowEditPhone] = useState(false);
     const [phoneOtpStep, setPhoneOtpStep] = useState('phone');
     const [showTooltip, setShowTooltip] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const phoneForm = useForm({
         telefono: user.telefono || '',
@@ -136,14 +151,14 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
         reembolsoForm.post('/perfil/reembolso', { preserveScroll: true });
     };
 
-    const submitPassword = (e) => {
+    const submitPassword = async (e) => {
         e.preventDefault();
         passwordForm.post('/perfil/password', { preserveScroll: true, onSuccess: () => { setShowEditPassword(false); passwordForm.reset(); } });
     };
 
-    const submitDeleteAccount = (e) => {
+    const submitDeleteAccount = async (e) => {
         e.preventDefault();
-        if(confirm("¿Estás completamente seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.")) {
+        if(await confirmDialog("¿Estás completamente seguro de que deseas eliminar tu cuenta? Esta acción no se puede deshacer.")) {
             deleteAccountForm.delete('/perfil/cuenta', { preserveScroll: true });
         }
     };
@@ -168,32 +183,28 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
     };
 
     const renderHome = () => (
-        <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 20px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h1 style={{ fontSize: '24px', color: '#333', fontWeight: '400' }}>Hola, {user.nombres}</h1>
-                <div style={{ background: '#f5f5f5', borderRadius: '8px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', transition: 'background 0.2s' }}>
-                    <div style={{ width: '24px', height: '24px', background: '#00B4FF', borderRadius: '50%' }}></div>
-                    <div>
-                        <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>Tienes 0 Puntos</div>
-                        <div style={{ fontSize: '11px', color: '#666' }}>Descubre los canjes y beneficios</div>
-                    </div>
-                    <span style={{ color: '#00B4FF', fontWeight: 'bold' }}>›</span>
+        <div style={{ flex: 1 }}>
+            <h2 style={{ fontSize: '24px', color: '#333', fontWeight: '400', marginBottom: '25px' }}>Panel de Control</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '40px' }}>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Información Personal</div>
+                    <div style={{ fontSize: '16px', color: '#333', fontWeight: '600' }}>{user.nombres} {user.apellidos}</div>
+                    <div style={{ fontSize: '14px', color: '#666', marginTop: '5px' }}>{user.email}</div>
+                    <button onClick={() => changeView('perfil')} style={{ alignSelf: 'flex-start', marginTop: '15px', color: '#00B4FF', fontSize: '13px', fontWeight: '600', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>Editar perfil</button>
                 </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '40px' }}>
-                <button onClick={() => changeView('compras')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '120px', height: '100px', background: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    <span style={{ fontSize: '13px', marginTop: '8px', color: '#444' }}>Mis compras</span>
-                </button>
-                <button onClick={() => changeView('perfil')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '120px', height: '100px', background: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    <span style={{ fontSize: '13px', marginTop: '8px', color: '#444' }}>Mi perfil</span>
-                </button>
-                <button style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '120px', height: '100px', background: 'white', borderRadius: '12px', border: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    <span style={{ fontSize: '13px', marginTop: '8px', color: '#444' }}>Ayuda</span>
-                </button>
+                <div style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>Dirección Principal</div>
+                    {direcciones.find(d => d.principal) ? (
+                        <>
+                            <div style={{ fontSize: '15px', color: '#333', fontWeight: '500' }}>{direcciones.find(d => d.principal).direccion}</div>
+                            <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>{direcciones.find(d => d.principal).distrito}, {direcciones.find(d => d.principal).provincia}</div>
+                        </>
+                    ) : (
+                        <div style={{ fontSize: '14px', color: '#666' }}>No tienes dirección principal.</div>
+                    )}
+                    <button onClick={() => changeView('direcciones')} style={{ alignSelf: 'flex-start', marginTop: '15px', color: '#00B4FF', fontSize: '13px', fontWeight: '600', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>Gestionar direcciones</button>
+                </div>
             </div>
 
             <div style={{ marginBottom: '40px' }}>
@@ -204,54 +215,29 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                 {pedidos.length === 0 ? (
                     <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', color: '#666' }}>Aún no tienes compras.</div>
                 ) : (
-                    <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                         {pedidos.slice(0, 3).map(pedido => {
                             const primerItem = pedido.items && pedido.items.length > 0 ? pedido.items[0] : null;
-                            const imagenUrl = primerItem?.variante?.producto?.imagenes?.[0]?.ruta || '/img/placeholder.jpg';
+                            const imagenUrl = primerItem?.variante?.producto?.imagenes?.[0]?.url || primerItem?.variante?.producto?.imagenes?.[0]?.ruta || '/img/placeholder.jpg';
                             const nombreProd = primerItem?.variante?.producto?.nombre || 'Producto';
                             
                             return (
-                                <div key={pedido.id} onClick={() => changeView('compras')} style={{ minWidth: '280px', flex: 1, background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', gap: '15px', cursor: 'pointer' }}>
-                                    <div style={{ width: '80px', height: '80px', flexShrink: 0, position: 'relative' }}>
-                                        <div style={{ position: 'absolute', top: '-10px', left: '-10px', background: pedido.estado === 'Completado' ? '#a3e635' : (pedido.estado === 'Enviado' ? '#38bdf8' : '#cbd5e1'), color: '#000', fontSize: '10px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '4px', zIndex: 2 }}>{pedido.estado}</div>
-                                        <img src={imagenUrl} alt={nombreProd} style={{ width: '100%', height: '100%', objectFit: 'contain', border: '1px solid #f1f5f9', borderRadius: '8px' }} />
+                                <div key={pedido.id} onClick={() => changeView('compras')} style={{ background: 'white', borderRadius: '12px', padding: '15px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', gap: '15px', cursor: 'pointer', border: '1px solid #f1f5f9' }}>
+                                    <div style={{ width: '70px', height: '70px', flexShrink: 0, background: '#f8fafc', borderRadius: '8px', padding: '5px' }}>
+                                        <img src={imagenUrl} alt={nombreProd} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                                        <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>{pedido.estado === 'Completado' ? 'Entregado' : 'Estado: ' + pedido.estado} el {new Date(pedido.created_at).toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long'})}</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1 }}>
+                                        <div style={{ fontSize: '13px', color: '#333', fontWeight: '600', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{nombreProd}</div>
+                                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '5px' }}>{new Date(pedido.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric'})}</div>
+                                        <div style={{ marginTop: '5px' }}>
+                                            <span style={{ background: pedido.estado === 'Completado' ? '#dcfce7' : (pedido.estado === 'Enviado' ? '#e0f2fe' : '#f1f5f9'), color: pedido.estado === 'Completado' ? '#166534' : (pedido.estado === 'Enviado' ? '#0369a1' : '#475569'), fontSize: '11px', fontWeight: 'bold', padding: '3px 8px', borderRadius: '12px' }}>{pedido.estado === 'Completado' ? 'Entregado' : pedido.estado}</span>
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
                 )}
-            </div>
-
-            <div style={{ marginBottom: '40px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '15px' }}>
-                    <h2 style={{ fontSize: '18px', fontWeight: '500', color: '#333' }}>Mis listas</h2>
-                    <span onClick={() => changeView('listas')} style={{ fontSize: '13px', color: '#666', cursor: 'pointer' }}>Ir a Mis listas ›</span>
-                </div>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                    {listas.slice(0, 3).map(lista => (
-                        <div key={lista.id} onClick={() => changeView('listas')} style={{ width: '280px', background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gap: '5px', height: '140px' }}>
-                                <div style={{ gridRow: 'span 2', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden' }}>
-                                    {lista.items?.[0] && <img src={lista.items[0].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
-                                </div>
-                                <div style={{ background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden' }}>
-                                    {lista.items?.[1] && <img src={lista.items[1].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
-                                </div>
-                                <div style={{ background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '18px', fontWeight: 'bold' }}>
-                                    +{(lista.items?.length || 0) > 2 ? lista.items.length - 2 : 0}
-                                </div>
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#333', fontWeight: '500' }}>{lista.nombre}</div>
-                        </div>
-                    ))}
-                    {listas.length === 0 && (
-                        <div style={{ padding: '20px', background: 'white', borderRadius: '12px', color: '#666', fontSize: '14px' }}>No tienes listas creadas.</div>
-                    )}
-                </div>
             </div>
         </div>
     );
@@ -288,13 +274,20 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                 <div style={{ display: 'flex', gap: '20px' }}>
                                     <div>
                                         <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Compras N° {pedido.codigo}</div>
-                                        <div style={{ fontSize: '14px', color: '#333', fontWeight: '500', marginBottom: '15px' }}>{pedido.estado === 'Completado' ? 'Entregado' : 'Estado: ' + pedido.estado} el {new Date(pedido.created_at).toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long'})}.</div>
+                                        <div style={{ fontSize: '14px', color: '#333', fontWeight: '500', marginBottom: '15px' }}>
+                                            {pedido.estado === 'Completado' ? 'Entregado' : `Estado: ${pedido.estado}`} 
+                                            <span style={{ fontWeight: 'normal', color: '#64748b', marginLeft: '5px' }}>
+                                                el {new Date(pedido.created_at).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit', hour12: true })}
+                                            </span>
+                                        </div>
                                         <div style={{ display: 'flex', gap: '15px' }}>
                                             <div style={{ width: '60px', height: '60px', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '5px' }}>
                                                 <img src={imagenUrl} alt="Producto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                             </div>
                                             <div>
-                                                <a href={`/seguimiento?codigo=${pedido.codigo}`} style={{ color: '#444', textDecoration: 'underline', fontSize: '13px' }}>Entregado</a>
+                                                <a href={`/seguimiento?codigo=${pedido.codigo}`} style={{ color: '#444', textDecoration: 'underline', fontSize: '13px' }}>
+                                                    {pedido.estado === 'Completado' ? 'Entregado' : 'Hacer seguimiento'}
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -321,7 +314,18 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
         });
         
         return (
-            <div style={{ width: '260px', flexShrink: 0, background: 'white', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ width: '260px', flexShrink: 0, background: 'white', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <button onClick={() => changeView('home')} style={getStyles('home')}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Panel de control
+                </button>
+                
+                <div style={{ height: '1px', background: '#f1f5f9', margin: '5px 0' }}></div>
+                
+                <button onClick={() => changeView('compras')} style={getStyles('compras')}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    Mis compras
+                </button>
                 <button onClick={() => changeView('perfil')} style={getStyles('perfil')}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Datos personales
@@ -427,7 +431,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                     </div>
                     <div style={{ display: 'flex', gap: '15px' }}>
                         {!dir.principal && <button onClick={() => router.post(`/perfil/direccion/${dir.id}/principal`, {}, { preserveScroll: true })} style={{ background: 'none', border: 'none', color: '#00B4FF', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Establecer principal</button>}
-                        <button onClick={() => {if(confirm("¿Eliminar dirección?")) router.delete(`/perfil/direccion/${dir.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer' }}>Eliminar</button>
+                        <button onClick={async () => {if(await confirmDialog("¿Eliminar dirección?")) router.delete(`/perfil/direccion/${dir.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer' }}>Eliminar</button>
                     </div>
                 </div>
             ))}
@@ -450,7 +454,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                             {t.principal ? <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>Principal</span> : null}
                         </div>
                     </div>
-                    <button onClick={() => {if(confirm("¿Eliminar tarjeta?")) router.delete(`/perfil/tarjetas/${t.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer' }}>Eliminar</button>
+                    <button onClick={async () => {if(await confirmDialog("¿Eliminar tarjeta?")) router.delete(`/perfil/tarjetas/${t.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '12px', textDecoration: 'underline', cursor: 'pointer' }}>Eliminar</button>
                 </div>
             ))}
             {tarjetas.length === 0 && <div style={{ padding: '40px', background: 'white', borderRadius: '12px', textAlign: 'center', color: '#666', marginBottom: '15px' }}>No tienes tarjetas guardadas.</div>}
@@ -540,19 +544,129 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
         </div>
     );
 
-    const renderListas = () => (
+    const renderListas = () => {
+        if (selectedList) {
+            const lista = listas.find(l => l.id === selectedList.id) || selectedList;
+            const items = lista.items || [];
+            
+            const handleSelectAll = async (e) => {
+                if (e.target.checked) {
+                    const allIds = {};
+                    items.forEach(i => allIds[i.id] = true);
+                    setSelectedItems(allIds);
+                } else {
+                    setSelectedItems({});
+                }
+            };
+            
+            const handleSelectItem = async (id, checked) => {
+                setSelectedItems(prev => ({...prev, [id]: checked}));
+            };
+            
+            const allSelected = items.length > 0 && Object.keys(selectedItems).length === items.length && Object.values(selectedItems).every(v => v);
+            
+            return (
+                <div style={{ flex: 1, background: 'white', borderRadius: '12px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                        <button onClick={() => {setSelectedList(null); setSelectedItems({});}} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '20px', color: '#333', fontWeight: '400', padding: 0 }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                            {lista.nombre}
+                        </button>
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px', color: '#64748b' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>
+                                Compartir
+                            </button>
+                            <button style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#64748b' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ 
+                            width: '20px', height: '20px', borderRadius: '4px', 
+                            border: allSelected ? 'none' : '1px solid #94a3b8', 
+                            background: allSelected ? '#334155' : 'white', 
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' 
+                        }}>
+                            {allSelected && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                            <input type="checkbox" checked={allSelected} onChange={handleSelectAll} style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '20px', height: '20px' }} />
+                        </div>
+                        <span style={{ fontSize: '14px', color: '#64748b' }}>Seleccionar todos ({items.length} productos)</span>
+                    </div>
+                    
+                    <div>
+                        {items.map(item => {
+                            const prod = item.producto;
+                            if (!prod) return null;
+                            const isChecked = !!selectedItems[item.id];
+                            return (
+                                <div key={item.id} style={{ display: 'flex', gap: '20px', padding: '20px 0', borderTop: '1px solid #e2e8f0' }}>
+                                    <div style={{ paddingTop: '10px' }}>
+                                        <div style={{ 
+                                            width: '20px', height: '20px', borderRadius: '4px', 
+                                            border: isChecked ? 'none' : '1px solid #cbd5e1', 
+                                            background: isChecked ? '#00B4FF' : '#f8fafc', 
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' 
+                                        }}>
+                                            {isChecked && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                            <input type="checkbox" checked={isChecked} onChange={(e) => handleSelectItem(item.id, e.target.checked)} style={{ position: 'absolute', opacity: 0, cursor: 'pointer', width: '20px', height: '20px' }} />
+                                        </div>
+                                    </div>
+                                    <div style={{ width: '100px', height: '100px', background: '#f8fafc', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
+                                        <img src={prod.imagenes?.[0]?.url || prod.imagenes?.[0]?.ruta || '/img/placeholder.jpg'} alt={prod.nombre} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>{prod.marca || 'Marca'}</div>
+                                        <div style={{ fontSize: '14px', color: '#334155', fontWeight: '500', marginBottom: '8px', lineHeight: '1.4' }}>{prod.nombre}</div>
+                                        
+                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                                            <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>S/ {prod.precio_actual}</span>
+                                            {prod.precio_anterior > prod.precio_actual && (
+                                                <>
+                                                    <span style={{ background: '#64748b', color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>-{prod.descuento}%</span>
+                                                    <span style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'line-through' }}>S/ {prod.precio_anterior}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-end', gap: '20px', width: '120px' }}>
+                                        <a href="#" style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a', textDecoration: 'underline' }}>Buscar similares</a>
+                                        <button onClick={async () => {if(await confirmDialog("¿Eliminar este producto de la lista?")) router.delete(`/perfil/listas/items/${item.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {items.length === 0 && (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#94a3b8', borderTop: '1px solid #e2e8f0' }}>Esta lista está vacía.</div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
         <div style={{ flex: 1 }}>
             <h2 style={{ fontSize: '20px', color: '#333', fontWeight: '400', marginBottom: '25px' }}>Mis listas</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                 {listas.map(lista => (
-                    <div key={lista.id} style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div 
+                        key={lista.id} 
+                        onClick={() => setSelectedList(lista)} 
+                        style={{ background: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'all 0.3s ease', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }} 
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#00B4FF'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(0, 180, 255, 0.15)'; e.currentTarget.style.transform = 'translateY(-2px)'; }} 
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gridTemplateRows: '1fr 1fr', gap: '5px', height: '140px' }}>
                             <div style={{ gridRow: 'span 2', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden' }}>
-                                {lista.items?.[0] && <img src={lista.items[0].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
+                                {lista.items?.[0] && <img src={lista.items[0].producto?.imagenes?.[0]?.url || lista.items[0].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
                             </div>
                             <div style={{ background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden' }}>
-                                {lista.items?.[1] && <img src={lista.items[1].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
+                                {lista.items?.[1] && <img src={lista.items[1].producto?.imagenes?.[0]?.url || lista.items[1].producto?.imagenes?.[0]?.ruta} style={{width:'100%', height:'100%', objectFit:'cover'}} />}
                             </div>
                             <div style={{ background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '18px', fontWeight: 'bold' }}>
                                 +{(lista.items?.length || 0) > 2 ? lista.items.length - 2 : 0}
@@ -560,7 +674,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
                             <div style={{ fontSize: '15px', color: '#333', fontWeight: '600' }}>{lista.nombre}</div>
-                            <button onClick={() => {if(confirm("¿Eliminar lista?")) router.delete(`/perfil/listas/${lista.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                            <button onClick={async (e) => { e.stopPropagation(); if(await confirmDialog("¿Eliminar lista?")) router.delete(`/perfil/listas/${lista.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', cursor: 'pointer' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                         </div>
                         <div style={{ fontSize: '13px', color: '#64748b' }}>{(lista.items?.length || 0)} productos • {lista.es_publica ? 'Pública' : 'Privada'}</div>
                     </div>
@@ -573,6 +687,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             </div>
         </div>
     );
+    };
 
     const renderSesiones = () => (
         <div style={{ flex: 1 }}>
@@ -596,7 +711,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => {if(confirm("¿Cerrar sesión en este dispositivo?")) router.delete(`/perfil/sesiones/${sesion.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Cerrar sesión</button>
+                        <button onClick={async () => {if(await confirmDialog("¿Cerrar sesión en este dispositivo?")) router.delete(`/perfil/sesiones/${sesion.id}`, { preserveScroll: true })}} style={{ background: 'none', border: 'none', color: '#e11d48', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Cerrar sesión</button>
                     </div>
                 );
             })}
@@ -613,7 +728,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                         <div style={{ fontSize: '15px', color: '#333', fontWeight: '500', marginBottom: '5px' }}>Contraseña de acceso</div>
                         <div style={{ fontSize: '13px', color: '#64748b' }}>Actualiza tu contraseña para mantener tu cuenta segura.</div>
                     </div>
-                    <button onClick={() => setShowEditPassword(true)} style={{ padding: '10px 20px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '24px', color: '#333', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cambiar contraseña</button>
+                    <button onClick={() => setShowEditPassword(true)} style={{ padding: '10px 20px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '24px', color: '#333', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>{!usuario?.has_set_password ? 'Establecer contraseña' : 'Cambiar contraseña'}</button>
                 </div>
             </div>
 
@@ -632,19 +747,29 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
     return (
         <div className="efe-home" style={{ background: '#f8fafc', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Head title="Mi Cuenta" />
-            <Header cartCount={0} onOpenCart={() => {}} onOpenCategories={() => {}} logoUrl={null} minimal={true} />
+            <Toast message={flash?.success} type="success" />
+            <Toast message={flash?.error} type="error" />
             
-            {currentView === 'home' && renderHome()}
-            {currentView === 'compras' && renderCompras()}
+            <Header 
+                cartCount={cart?.count || 0} 
+                onOpenCart={() => setIsCartOpen(true)} 
+                onOpenCategories={() => setIsCatOpen(true)}
+                logoUrl={null} 
+                minimal={false} 
+            />
+            {categoriaProductos && categoriaProductos.length > 0 && (
+                <CategoryNavBar
+                    categorias={categoriaProductos}
+                    onOpenCategories={() => setIsCatOpen(true)}
+                />
+            )}
             
-            {['perfil', 'direcciones', 'tarjetas', 'reembolso', 'listas', 'sesiones', 'configuracion'].includes(currentView) && (
-                <div style={{ maxWidth: '1000px', margin: '40px auto', padding: '0 20px', width: '100%' }}>
-                    <div onClick={() => changeView('home')} style={{ color: '#444', fontSize: '13px', fontWeight: '500', marginBottom: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"></polyline></svg> Mi cuenta
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '40px', marginTop: '20px', flexDirection: 'row', alignItems: 'flex-start' }}>
-                        {renderPerfilSidebar()}
+            <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', width: '100%', flex: 1 }}>
+                <div style={{ display: 'flex', gap: '30px', flexDirection: 'row', alignItems: 'flex-start' }}>
+                    {renderPerfilSidebar()}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {currentView === 'home' && renderHome()}
+                        {currentView === 'compras' && renderCompras()}
                         {currentView === 'perfil' && renderDatosPersonales()}
                         {currentView === 'direcciones' && renderDirecciones()}
                         {currentView === 'tarjetas' && renderTarjetas()}
@@ -654,13 +779,18 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                         {currentView === 'configuracion' && renderConfiguracion()}
                     </div>
                 </div>
-            )}
+            </div>
+            
+            <Footer />
+
+            <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} cart={cart} />
+            <CategoryDrawer isOpen={isCatOpen} onClose={() => setIsCatOpen(false)} categorias={categoriaProductos} />
 
             {/* Modal Editar Perfil */}
             {showEditProfile && (
                 <>
-                    <div onClick={() => setShowEditProfile(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
-                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={() => setShowEditProfile(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B4FF" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -691,8 +821,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Editar Celular */}
             {showEditPhone && (
                 <>
-                    <div onClick={() => setShowEditPhone(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
-                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={() => setShowEditPhone(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -746,8 +876,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Agregar Dirección */}
             {showAddAddress && (
                 <>
-                    <div onClick={() => setShowAddAddress(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
-                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={() => setShowAddAddress(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B4FF" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -804,28 +934,83 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Editar Contraseña */}
             {showEditPassword && (
                 <>
-                    <div onClick={() => setShowEditPassword(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
-                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={() => setShowEditPassword(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)', transition: 'all 0.3s' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B4FF" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                                Cambiar Contraseña
+                                {!usuario?.has_set_password ? 'Establecer Contraseña' : 'Cambiar Contraseña'}
                             </h3>
                             <button onClick={() => setShowEditPassword(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#999' }}>✕</button>
                         </div>
                         
                         <form onSubmit={submitPassword} style={{ display: 'flex', flexDirection: 'column', gap: '25px', flex: 1 }}>
-                            <div>
-                                <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Contraseña actual</label>
-                                <input type="password" value={passwordForm.data.current_password} onChange={e => passwordForm.setData('current_password', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
-                            </div>
+                            {!usuario?.has_set_password ? null : (
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Contraseña actual</label>
+                                    <input type="password" value={passwordForm.data.current_password} onChange={e => passwordForm.setData('current_password', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
+                                </div>
+                            )}
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Nueva contraseña</label>
-                                <input type="password" value={passwordForm.data.password} onChange={e => passwordForm.setData('password', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
+                                <div style={{ position: 'relative' }}>
+                                    <input type={showPassword ? "text" : "password"} value={passwordForm.data.password} onChange={e => passwordForm.setData('password', e.target.value)} style={{ width: '100%', padding: '10px 40px 10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                                        {showPassword ? '👁' : '👁‍🗨'}
+                                    </button>
+                                </div>
+                                
+                                {/* Visual Password Check */}
+                                <div style={{ marginTop: '10px', fontSize: '11px', color: '#64748b', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span style={{ color: passwordForm.data.password.length >= 8 ? '#10b981' : '#94a3b8' }}>
+                                        {passwordForm.data.password.length >= 8 ? '✓' : '○'} Mínimo 8 caracteres
+                                    </span>
+                                    <span style={{ color: /[A-Z]/.test(passwordForm.data.password) ? '#10b981' : '#94a3b8' }}>
+                                        {/[A-Z]/.test(passwordForm.data.password) ? '✓' : '○'} Al menos una mayúscula
+                                    </span>
+                                    <span style={{ color: /[a-z]/.test(passwordForm.data.password) ? '#10b981' : '#94a3b8' }}>
+                                        {/[a-z]/.test(passwordForm.data.password) ? '✓' : '○'} Al menos una minúscula
+                                    </span>
+                                    <span style={{ color: /[0-9]/.test(passwordForm.data.password) ? '#10b981' : '#94a3b8' }}>
+                                        {/[0-9]/.test(passwordForm.data.password) ? '✓' : '○'} Al menos un número
+                                    </span>
+                                    <span style={{ color: /[@$!%*#?&]/.test(passwordForm.data.password) ? '#10b981' : '#94a3b8' }}>
+                                        {/[@$!%*#?&]/.test(passwordForm.data.password) ? '✓' : '○'} Al menos un carácter especial (@$!%*#?&)
+                                    </span>
+                                </div>
                             </div>
                             <div>
                                 <label style={{ fontSize: '12px', fontWeight: '600', color: '#94a3b8', display: 'block', marginBottom: '5px' }}>Confirmar nueva contraseña</label>
-                                <input type="password" value={passwordForm.data.password_confirmation} onChange={e => passwordForm.setData('password_confirmation', e.target.value)} style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '1px solid #cbd5e1', outline: 'none', fontSize: '15px', color: '#333' }} required />
+                                <div style={{ position: 'relative' }}>
+                                    <input 
+                                        type={showConfirmPassword ? "text" : "password"} 
+                                        value={passwordForm.data.password_confirmation} 
+                                        onChange={e => passwordForm.setData('password_confirmation', e.target.value)} 
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '10px 40px 10px 0', 
+                                            border: 'none', 
+                                            borderBottom: passwordForm.data.password_confirmation === '' 
+                                                ? '1px solid #cbd5e1' 
+                                                : passwordForm.data.password === passwordForm.data.password_confirmation 
+                                                    ? '2px solid #10b981' // Verde si coincide
+                                                    : '2px solid #ef4444', // Rojo si no coincide
+                                            outline: 'none', 
+                                            fontSize: '15px', 
+                                            color: passwordForm.data.password_confirmation !== '' && passwordForm.data.password !== passwordForm.data.password_confirmation ? '#ef4444' : '#333'
+                                        }} 
+                                        required 
+                                    />
+                                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}>
+                                        {showConfirmPassword ? '👁' : '👁‍🗨'}
+                                    </button>
+                                </div>
+                                {passwordForm.data.password_confirmation !== '' && passwordForm.data.password === passwordForm.data.password_confirmation && (
+                                    <div style={{ fontSize: '11px', color: '#10b981', marginTop: '5px' }}>✓ Las contraseñas coinciden</div>
+                                )}
+                                {passwordForm.data.password_confirmation !== '' && passwordForm.data.password !== passwordForm.data.password_confirmation && (
+                                    <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '5px' }}>✕ Las contraseñas no coinciden</div>
+                                )}
                             </div>
 
                             <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
@@ -840,8 +1025,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Agregar Tarjeta */}
             {showAddTarjeta && (
                 <>
-                    <div onClick={() => setShowAddTarjeta(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
-                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                    <div onClick={() => setShowAddTarjeta(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
+                    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', padding: '30px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>Agregar tarjeta</h3>
                             <button onClick={() => setShowAddTarjeta(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
@@ -876,8 +1061,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Agregar Lista */}
             {showAddLista && (
                 <>
-                    <div onClick={() => setShowAddLista(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
-                    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, borderRadius: '12px', padding: '30px' }}>
+                    <div onClick={() => setShowAddLista(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
+                    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, borderRadius: '12px', padding: '30px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#333' }}>Nueva Lista</h3>
                             <button onClick={() => setShowAddLista(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
@@ -900,8 +1085,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             {/* Modal Eliminar Cuenta */}
             {showDeleteAccount && (
                 <>
-                    <div onClick={() => setShowDeleteAccount(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
-                    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: '400px', background: 'white', zIndex: 100, borderRadius: '12px', padding: '30px' }}>
+                    <div onClick={() => setShowDeleteAccount(false)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(2px)' }}></div>
+                    <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: '400px', background: 'white', zIndex: 10000, borderRadius: '12px', padding: '30px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#e11d48', marginBottom: '15px' }}>Eliminar Cuenta</h3>
                         <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>Por favor ingresa tu contraseña para confirmar que deseas eliminar tu cuenta permanentemente.</p>
                         <form onSubmit={submitDeleteAccount} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

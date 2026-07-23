@@ -1,17 +1,21 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index({ reviews }) {
+    const confirmDialog = useConfirm();
+
     const { flash } = usePage().props;
 
-    const toggleAprobacion = (id) => {
-        if (confirm('¿Estás seguro de cambiar el estado de esta reseña?')) {
+    const toggleAprobacion = async (id) => {
+        if (await confirmDialog('¿Estás seguro de cambiar el estado de esta reseña?')) {
             router.post(`/admin/reviews/${id}/toggle`);
         }
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de que deseas eliminar esta reseña permanentemente?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de que deseas eliminar esta reseña permanentemente?')) {
             router.delete(`/admin/reviews/${id}`);
         }
     };

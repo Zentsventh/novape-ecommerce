@@ -2,8 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function AlmacenesIndex({ almacenes, productos, categorias, marcas, stocks, logoUrl }) {
+    const confirmDialog = useConfirm();
+
     const [showModal, setShowModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
 
@@ -25,13 +29,13 @@ export default function AlmacenesIndex({ almacenes, productos, categorias, marca
         postA('/admin/almacenes', { onSuccess: () => { setShowModal(false); resetA(); } });
     };
 
-    const submitTransfer = (e) => {
+    const submitTransfer = async (e) => {
         e.preventDefault();
         postT('/admin/almacenes/transferir', { onSuccess: () => { setShowTransferModal(false); resetT(); } });
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Eliminar este almacén? Esto podría afectar a los productos vinculados.')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Eliminar este almacén? Esto podría afectar a los productos vinculados.')) {
             router.delete(`/admin/almacenes/${id}`);
         }
     };

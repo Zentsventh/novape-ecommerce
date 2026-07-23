@@ -3,8 +3,12 @@ import { Head, useForm, router, usePage, Link } from '@inertiajs/react';
 import { Lock, FileText, Search, Package, ShoppingCart, Trash2, User, Receipt, DollarSign, Printer, Settings } from 'lucide-react';
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function PosIndex({ productos, metodosPago, categorias = [], ventasHoy, ticketsHoy, cajaAbierta, ventasCajaTotal, ventasCajaEfectivo, logoUrl, igv_porcentaje = 18 }) {
+    const confirmDialog = useConfirm();
+
     const { flash, errors, auth } = usePage().props;
     const [carrito, setCarrito] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -181,7 +185,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
 
     // Hotkeys
     useEffect(() => {
-        const handleKeyDown = (e) => {
+        const handleKeyDown = async (e) => {
             if (e.key === 'F2') {
                 e.preventDefault();
                 iniciarCobro();
@@ -198,7 +202,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
                     setShowMovimiento(false);
                     setShowPausadas(false);
                 } else if (carrito.length > 0) {
-                    if(confirm("¿Limpiar el carrito actual?")) {
+                    if(await confirmDialog("¿Limpiar el carrito actual?")) {
                         setCarrito([]);
                         setClienteDoc('');
                         setClienteNombre('');

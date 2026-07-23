@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
 import AdminLayout from '../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Proveedores({ proveedores }) {
+    const confirmDialog = useConfirm();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
@@ -36,7 +40,7 @@ export default function Proveedores({ proveedores }) {
         reset();
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (editingId) {
             put(`/admin/proveedores/${editingId}`, { onSuccess: () => closeModal() });
@@ -45,8 +49,8 @@ export default function Proveedores({ proveedores }) {
         }
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar este proveedor?')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar este proveedor?')) {
             destroy(`/admin/proveedores/${id}`);
         }
     };

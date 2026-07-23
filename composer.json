@@ -17,7 +17,8 @@
         "simplesoftwareio/simple-qrcode": "^4.2",
         "spatie/browsershot": "^5.4",
         "spatie/laravel-pdf": "^2.12",
-        "stripe/stripe-php": "^20.1"
+        "stripe/stripe-php": "^20.1",
+        "tightenco/ziggy": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

@@ -5,7 +5,7 @@ import Header from '../Components/Home/Header';
 export default function CheckoutSuccess({ pedido }) {
     useEffect(() => {
         // Redirigir de inmediato a la sección de órdenes en el perfil sin refrescar la página
-        router.visit('/perfil?tab=ordenes');
+        router.visit('/perfil?tab=compras');
     }, []);
 
     return (

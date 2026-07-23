@@ -1,8 +1,12 @@
 import React from 'react';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Show({ pedido }) {
+    const confirmDialog = useConfirm();
+
     const { flash } = usePage().props;
     const { data, setData, put, processing } = useForm({
         estado: pedido.estado,
@@ -15,7 +19,7 @@ export default function Show({ pedido }) {
         put(`/admin/pedidos/${pedido.id}/estado`);
     };
 
-    const getStatusColor = (estado) => {
+    const getStatusColor = async (estado) => {
         switch (estado) {
             case 'pendiente': return '#60a5fa';
             case 'procesando': return '#3b82f6';
@@ -171,10 +175,9 @@ export default function Show({ pedido }) {
                             Estado del Pago: <strong>{pedido.pago?.estado || 'Desconocido'}</strong>
                         </p>
                         
-                        {pedido.pago?.estado === 'completado' && pedido.estado !== 'cancelado' ? (
+                        {pedido.pago?.estado === 'completado' && pedido.estado !== 'cancelado' ? async (
                             <button 
-                                onClick={() => {
-                                    if(confirm('¿Estás seguro que deseas reembolsar y cancelar este pedido? Esta acción no se puede deshacer.')) {
+                                onClick={async () => { if(await confirmDialog('¿Estás seguro que deseas reembolsar y cancelar este pedido? Esta acción no se puede deshacer.')) {
                                         router.post(`/admin/pedidos/${pedido.id}/reembolsar`);
                                     }
                                 }}

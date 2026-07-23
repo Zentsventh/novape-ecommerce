@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage, router } from '@inertiajs/react';
 import AdminLayout from '../../../Layouts/AdminLayout';
+import { useConfirm } from '@/Contexts/ConfirmContext';
+
 
 export default function Index() {
+    const confirmDialog = useConfirm();
+
     const { categorias, flash } = usePage().props;
     const [expanded, setExpanded] = useState({});
 
-    const toggleExpand = (id) => {
+    const toggleExpand = async (id) => {
         setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const handleDelete = (id) => {
-        if (confirm('¿Estás seguro de eliminar esta categoría? Si es una categoría principal, también afectará a sus subcategorías (dependiendo de la configuración).')) {
+    const handleDelete = async (id) => {
+        if (await confirmDialog('¿Estás seguro de eliminar esta categoría? Si es una categoría principal, también afectará a sus subcategorías (dependiendo de la configuración).')) {
             router.delete(`/admin/categorias/${id}`);
         }
     };
