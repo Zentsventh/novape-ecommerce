@@ -174,24 +174,20 @@ export default function AdminLayout({ children, logoUrl }) {
                 <nav className="admin-nav">
                     {visibleNavItems.map((item, i) => {
                         return (
-                            <button
+                            <Link
                                 key={item.href}
+                                href={item.href}
                                 className={`admin-nav-link ${isActive(item) ? 'active' : ''}`}
                                 title={item.label}
-                                onClick={(e) => {
-                                    e.preventDefault();
+                                onClick={() => {
                                     if (isMobile || isTablet) {
-                                        setSidebarOpen(false);
-                                    }
-                                    if (url !== item.href) {
-                                        router.get(item.href);
+                                        setTimeout(() => setSidebarOpen(false), 150);
                                     }
                                 }}
-                                style={{ border: 'none', background: 'transparent', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
                             >
                                 {item.icon}
                                 <span className="admin-nav-label">{item.label}</span>
-                            </button>
+                            </Link>
                         );
                     })}
                 </nav>
