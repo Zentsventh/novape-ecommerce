@@ -7,7 +7,7 @@
     right: 24px;
     width: 90px;
     height: 90px;
-    z-index: 99999;
+    z-index: 9990;
     will-change: transform;
 }
 
@@ -138,7 +138,7 @@
     background: #ffffff;
     border-radius: 20px;
     box-shadow: 0 16px 56px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);
-    z-index: 10002;
+    z-index: 9991;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -383,8 +383,8 @@
     .efe-chatbot-wrapper {
         width: 65px;
         height: 65px;
-        bottom: 20px;
-        right: 20px;
+        bottom: 70px;
+        right: 16px;
     }
 
     .efe-chatbot-btn {
@@ -405,7 +405,28 @@
     .efe-chat-panel {
         width: calc(100vw - 24px);
         right: 12px;
-        bottom: 100px;
+        bottom: 148px;
         max-height: 420px;
+    }
+
+    .efe-chatbot-wrapper::before,
+    .efe-chatbot-wrapper::after,
+    .efe-chatbot-radar-ring {
+        width: 65px;
+        height: 65px;
+    }
+}
+
+@media (max-width: 480px) {
+    .efe-chat-panel {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+        z-index: 9999;
     }
 }

@@ -66,7 +66,7 @@ export default function Show({ trabajador, totalCompras, totalPedidos }) {
                     {flash?.error || errors?.error}
                 </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px', alignItems: 'start' }}>
+            <div className="admin-grid-charts" style={{ gap: '20px', alignItems: 'start' }}>
                 {/* Lado izquierdo: Información del Usuario y Notas */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
@@ -93,7 +93,7 @@ export default function Show({ trabajador, totalCompras, totalPedidos }) {
                             <p style={{ color: 'var(--admin-text-muted)', marginBottom: '10px' }}><strong>Fecha de Registro:</strong> <br/><span style={{ color: 'var(--admin-text-main)' }}>{new Date(cliente.created_at).toLocaleDateString()}</span></p>
                         </div>
 
-                        <div style={{ borderTop: '1px solid var(--admin-border)', paddingTop: '15px', marginTop: '15px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', textAlign: 'center' }}>
+                        <div style={{ borderTop: '1px solid var(--admin-border)', paddingTop: '15px', marginTop: '15px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px', textAlign: 'center' }}>
                             <div style={{ background: 'rgba(138,43,226,0.05)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(29,78,216,0.1)' }}>
                                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1d4ed8' }}>{totalPedidos}</div>
                                 <div style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>Pedidos</div>
@@ -123,47 +123,48 @@ export default function Show({ trabajador, totalCompras, totalPedidos }) {
                 {/* Lado derecho: Historial de Pedidos */}
                 <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--admin-text-main)', borderBottom: '1px solid var(--admin-border)', paddingBottom: '10px', marginBottom: '15px' }}>Últimos Pedidos</h2>
-                    
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ color: 'var(--admin-text-muted)', borderBottom: '1px solid var(--admin-border)' }}>
-                                <th style={{ padding: '10px' }}>Código</th>
-                                <th style={{ padding: '10px' }}>Fecha</th>
-                                <th style={{ padding: '10px' }}>Total</th>
-                                <th style={{ padding: '10px' }}>Estado</th>
-                                <th style={{ padding: '10px', textAlign: 'right' }}>Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {cliente.pedidos && cliente.pedidos.length > 0 ? cliente.pedidos.map(pedido => (
-                                <tr key={pedido.id} style={{ borderBottom: '1px solid var(--admin-border)' }}>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>{pedido.codigo}</td>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-muted)' }}>{new Date(pedido.created_at).toLocaleDateString()}</td>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>S/ {pedido.total}</td>
-                                    <td style={{ padding: '10px' }}>
-                                        <span style={{ 
-                                            background: 'rgba(107,114,128,0.1)', 
-                                            color: 'var(--admin-text-main)', 
-                                            padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', textTransform: 'capitalize' 
-                                        }}>
-                                            {pedido.estado}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '10px', textAlign: 'right' }}>
-                                        <Link href={`/admin/pedidos/${pedido.id}`} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' }}>
-                                            Ver Detalle
-                                        </Link>
-                                    </td>
+                    <div className="admin-table-container">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                            <thead>
+                                <tr style={{ color: 'var(--admin-text-muted)', borderBottom: '1px solid var(--admin-border)' }}>
+                                    <th style={{ padding: '10px' }}>Código</th>
+                                    <th style={{ padding: '10px' }}>Fecha</th>
+                                    <th style={{ padding: '10px' }}>Total</th>
+                                    <th style={{ padding: '10px' }}>Estado</th>
+                                    <th style={{ padding: '10px', textAlign: 'right' }}>Acción</th>
                                 </tr>
-                            )) : (
-                                <tr>
-                                    <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--admin-text-muted)' }}>
-                                        Este usuario no tiene pedidos.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {cliente.pedidos && cliente.pedidos.length > 0 ? cliente.pedidos.map(pedido => (
+                                    <tr key={pedido.id} style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>{pedido.codigo}</td>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-muted)' }}>{new Date(pedido.created_at).toLocaleDateString()}</td>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>S/ {pedido.total}</td>
+                                        <td style={{ padding: '10px' }}>
+                                            <span style={{ 
+                                                background: 'rgba(107,114,128,0.1)', 
+                                                color: 'var(--admin-text-main)', 
+                                                padding: '4px 8px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold', textTransform: 'capitalize' 
+                                            }}>
+                                                {pedido.estado}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '10px', textAlign: 'right' }}>
+                                            <Link href={`/admin/pedidos/${pedido.id}`} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 'bold', fontSize: '13px' }}>
+                                                Ver Detalle
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                )) : (
+                                    <tr>
+                                        <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--admin-text-muted)' }}>
+                                            Este usuario no tiene pedidos.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {/* Carrito Abandonado CRM */}
                     <div style={{ marginTop: '30px', borderTop: '1px solid var(--admin-border)', paddingTop: '20px' }}>
@@ -172,7 +173,7 @@ export default function Show({ trabajador, totalCompras, totalPedidos }) {
                             Carrito Abandonado / Pendiente
                         </h2>
                         {cliente.carrito_json && cliente.carrito_json.length > 0 ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
                                 {cliente.carrito_json.map((item, idx) => (
                                     <div key={idx} style={{ display: 'flex', gap: '10px', background: '#f9fafb', padding: '10px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
                                         <img src={item.imagen} alt={item.nombre} style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', background: 'white' }} />

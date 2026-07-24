@@ -1032,6 +1032,78 @@ select.admin-form-input { appearance: auto; cursor: pointer; }
     .admin-grid-tables { grid-template-columns: 1fr; }
 }
 
+/* ====== RESPONSIVE: TABLET (≤ 1024px) ====== */
+@media (max-width: 1024px) {
+    /* Sidebar: mini-mode (iconos solamente) */
+    :root { --admin-sidebar-width: 70px; }
+    
+    .admin-sidebar {
+        width: 70px;
+        overflow: hidden;
+    }
+
+    .admin-sidebar .admin-nav-text,
+    .admin-sidebar .admin-logo-text {
+        display: none;
+    }
+
+    .admin-sidebar .admin-nav-item {
+        justify-content: center;
+        padding: 12px;
+    }
+
+    .admin-sidebar .admin-nav-item svg {
+        margin: 0;
+    }
+
+    .admin-stats-row { grid-template-columns: repeat(2, 1fr); }
+    .admin-dashboard-grid { grid-template-columns: 1fr 1fr; }
+    .admin-grid-charts { grid-template-columns: 1fr; }
+    
+    /* Tablas: scroll horizontal */
+    .admin-card .admin-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+@media (max-width: 768px) {
+    :root { --admin-sidebar-width: 0px; }
+    
+    .admin-sidebar { 
+        transform: translateX(-100%); 
+        width: 260px;
+        transition: transform 0.3s ease;
+    }
+    
+    .admin-sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .admin-topbar-menu { display: block; }
+    
+    .pos-grid {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: calc(100vh - 150px);
+    }
+    
+    .admin-stats-row { grid-template-columns: 1fr; }
+    .admin-dashboard-grid { grid-template-columns: 1fr; }
+    .admin-content { padding: 16px; }
+    .admin-topbar { padding: 0 16px; }
+    .admin-topbar-search input { width: 160px; }
+    .admin-form-row { flex-direction: column; }
+    .admin-grid-charts { grid-template-columns: 1fr; }
+    .admin-grid-tables { grid-template-columns: 1fr; }
+
+    /* Touch targets para botones del admin */
+    .admin-btn,
+    .admin-nav-item {
+        min-height: 44px;
+    }
+}
+
 @media (max-width: 480px) {
     .admin-topbar { padding: 0 10px; }
     .admin-content { padding: 10px; }
@@ -1039,6 +1111,13 @@ select.admin-form-input { appearance: auto; cursor: pointer; }
     .admin-stat-card-value { font-size: 24px; }
     .admin-page-title { font-size: 18px; }
     .pos-grid { gap: 10px; }
+
+    /* Inputs: 16px para prevenir zoom en iOS */
+    .admin-content input,
+    .admin-content select,
+    .admin-content textarea {
+        font-size: 16px;
+    }
 }
 
 /* ====== ANIMATIONS ====== */

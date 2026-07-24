@@ -55,34 +55,36 @@ export default function Show({ pedido }) {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+            <div className="admin-grid-charts">
                 {/* Lado izquierdo: Artículos */}
                 <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                     <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--admin-text-main)', borderBottom: '1px solid var(--admin-border)', paddingBottom: '10px', marginBottom: '15px' }}>Artículos del Pedido</h2>
                     
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ color: 'var(--admin-text-muted)', borderBottom: '1px solid var(--admin-border)' }}>
-                                <th style={{ padding: '10px' }}>Producto</th>
-                                <th style={{ padding: '10px' }}>Precio</th>
-                                <th style={{ padding: '10px' }}>Cantidad</th>
-                                <th style={{ padding: '10px', textAlign: 'right' }}>Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {pedido.items?.map(item => (
-                                <tr key={item.id} style={{ borderBottom: '1px solid var(--admin-border)' }}>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-main)' }}>
-                                        {item.variante?.producto?.nombre || 'Producto Desconocido'}
-                                        {item.variante?.sku && <div style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>SKU: {item.variante.sku}</div>}
-                                    </td>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-muted)' }}>S/ {item.precio_unitario}</td>
-                                    <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>{item.cantidad}</td>
-                                    <td style={{ padding: '10px', textAlign: 'right', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>S/ {item.subtotal}</td>
+                    <div className="admin-table-container">
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                            <thead>
+                                <tr style={{ color: 'var(--admin-text-muted)', borderBottom: '1px solid var(--admin-border)' }}>
+                                    <th style={{ padding: '10px' }}>Producto</th>
+                                    <th style={{ padding: '10px' }}>Precio</th>
+                                    <th style={{ padding: '10px' }}>Cantidad</th>
+                                    <th style={{ padding: '10px', textAlign: 'right' }}>Subtotal</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {pedido.items?.map(item => (
+                                    <tr key={item.id} style={{ borderBottom: '1px solid var(--admin-border)' }}>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-main)' }}>
+                                            {item.variante?.producto?.nombre || 'Producto Desconocido'}
+                                            {item.variante?.sku && <div style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>SKU: {item.variante.sku}</div>}
+                                        </td>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-muted)' }}>S/ {item.precio_unitario}</td>
+                                        <td style={{ padding: '10px', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>{item.cantidad}</td>
+                                        <td style={{ padding: '10px', textAlign: 'right', color: 'var(--admin-text-main)', fontWeight: 'bold' }}>S/ {item.subtotal}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
                     <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end', fontSize: '16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', width: '200px', color: 'var(--admin-text-muted)' }}>

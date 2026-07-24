@@ -25,7 +25,7 @@ export default function Show({ producto, costoPromedio, historialCompras = [], c
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '20px' }}>
+            <div className="admin-grid-charts" style={{ gap: '20px' }}>
                 
                 {/* Info Principal */}
                 <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', padding: '25px', border: '1px solid var(--admin-border)' }}>
@@ -131,7 +131,7 @@ export default function Show({ producto, costoPromedio, historialCompras = [], c
                     <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--admin-text-main)', marginBottom: '15px' }}>
                         Órdenes de Compra Relacionadas
                     </h3>
-                    <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', border: '1px solid var(--admin-border)', overflow: 'hidden' }}>
+                    <div style={{ background: 'var(--admin-bg-panel)', borderRadius: '12px', border: '1px solid var(--admin-border)', overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead style={{ background: '#F8FAFC' }}>
                                 <tr>

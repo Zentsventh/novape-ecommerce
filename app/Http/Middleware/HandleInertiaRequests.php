@@ -52,6 +52,12 @@ class HandleInertiaRequests extends Middleware
         }
         $permisos = $user ? $user->getAllPermisos() : [];
 
+        // Detección de dispositivo server-side (User-Agent nativo — sin dependencias)
+        $ua = strtolower($request->header('User-Agent', ''));
+        $isMobile = (bool) preg_match('/mobile|android.*mobile|iphone|ipod|blackberry|opera mini|iemobile/i', $ua);
+        $isTablet = !$isMobile && (bool) preg_match('/tablet|ipad|android(?!.*mobile)|kindle|silk/i', $ua);
+        $isDesktop = !$isMobile && !$isTablet;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -62,13 +68,20 @@ class HandleInertiaRequests extends Middleware
                 'count' => $cartCount,
                 'total' => $cartTotal
             ],
-            'globalConfig' => [
-                'facebook_url' => \App\Models\ConfiguracionSitio::obtener('facebook_url', 'https://facebook.com/novape'),
-                'instagram_url' => \App\Models\ConfiguracionSitio::obtener('instagram_url', 'https://instagram.com/novape'),
-                'telefono_contacto' => \App\Models\ConfiguracionSitio::obtener('telefono_contacto', '+51 999 888 777'),
-                'email_contacto' => \App\Models\ConfiguracionSitio::obtener('email_contacto', 'contacto@novape.com'),
-                'logo_url' => \App\Models\ConfiguracionSitio::obtener('logo_url'),
+            'device' => [
+                'isMobile' => $isMobile,
+                'isTablet' => $isTablet,
+                'isDesktop' => $isDesktop,
             ],
+            'globalConfig' => fn () => \Illuminate\Support\Facades\Cache::remember('globalConfig', 3600, function () {
+                return [
+                    'facebook_url' => \App\Models\ConfiguracionSitio::obtener('facebook_url', 'https://facebook.com/novape'),
+                    'instagram_url' => \App\Models\ConfiguracionSitio::obtener('instagram_url', 'https://instagram.com/novape'),
+                    'telefono_contacto' => \App\Models\ConfiguracionSitio::obtener('telefono_contacto', '+51 999 888 777'),
+                    'email_contacto' => \App\Models\ConfiguracionSitio::obtener('email_contacto', 'contacto@novape.com'),
+                    'logo_url' => \App\Models\ConfiguracionSitio::obtener('logo_url'),
+                ];
+            }),
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

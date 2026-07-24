@@ -229,22 +229,37 @@ class OrderController extends Controller
         $logoPath = public_path('images/logofactura.png');
         $logoBase64 = null;
         if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
-            $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+            $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+        } else {
+            $logoPath = public_path('images/logo.png');
+            if (file_exists($logoPath)) {
+                $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+            }
         }
 
-        $empresa = [
-            'razon_social' => \App\Models\ConfiguracionSitio::obtener('nombre_sitio', 'NOVAPE S.A.C.'),
-            'ruc' => '20123456789',
-            'direccion' => 'Av. Principal 123',
-            'telefono' => \App\Models\ConfiguracionSitio::obtener('telefono_contacto', '+51 999 999 999'),
-            'email' => \App\Models\ConfiguracionSitio::obtener('email_contacto', 'ventas@novape.com'),
-            'horario' => 'Lunes a Viernes 9am - 6pm'
-        ];
+        $qrBase64 = null;
+        if (class_exists(\SimpleSoftwareIO\QrCode\Facades\QrCode::class)) {
+            $filename = 'factura-'.$pedido->codigo.'.pdf';
+            $qrContent = "Comprobante: " . $filename . " | Hash: " . md5($pedido->id . $pedido->codigo_pedido . time());
+            $qrSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::size(150)->generate($qrContent);
+            $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+        }
 
-        return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.factura', compact('pedido', 'logoBase64', 'empresa'))
-            ->setPaper('A4', 'portrait')
-            ->download('factura-'.$pedido->codigo.'.pdf');
+        $letras = null;
+        if (class_exists(\App\Helpers\NumberToWords::class)) {
+            $letras = \App\Helpers\NumberToWords::convert($pedido->total);
+        }
+
+        return \Spatie\LaravelPdf\Support\pdf()
+            ->view('pdf.invoice', [
+                'pedido' => $pedido,
+                'logoBase64' => $logoBase64,
+                'qrBase64' => $qrBase64,
+                'letras' => $letras
+            ])
+            ->format('a4')
+            ->name('factura-'.$pedido->codigo.'.pdf')
+            ->download();
     }
 
     public function export()

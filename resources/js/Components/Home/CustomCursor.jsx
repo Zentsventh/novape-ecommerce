@@ -1,14 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 import '../../../css/home/custom-cursor.css';
 
 export default function CustomCursor() {
     const cursorRef = useRef(null);
+    const { isTouch } = useDeviceContext();
     const [isHovering, setIsHovering] = useState(false);
-    const [hidden, setHidden] = useState(false);
+    const [hidden, setHidden] = useState(isTouch);
 
     useEffect(() => {
         // Solo en pantallas no táctiles
-        if (window.matchMedia("(pointer: coarse)").matches) {
+        if (isTouch) {
             setHidden(true);
             return;
         }

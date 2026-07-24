@@ -51,6 +51,8 @@ body {
     min-height: 100vh;
     background-color: var(--color-bg-light);
     font-family: var(--font-main);
+    /* Enable global container queries */
+    container-type: inline-size;
 }
 
 /* Banners promocionales */
@@ -92,3 +94,7 @@ body {
     50% { transform: scale(0.9); }
     100% { transform: scale(1); }
 }
+/* Profile Responsive Layout */
+.efe-profile-layout { flex-direction: row; }
+.efe-profile-sidebar { width: 260px; }
+@media (max-width: 768px) { .efe-profile-layout { flex-direction: column !important; } .efe-profile-sidebar { width: 100% !important; } }

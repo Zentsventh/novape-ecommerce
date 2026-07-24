@@ -115,4 +115,36 @@
         width: 18px;
         height: 18px;
     }
+
+    .efe-carousel-dots {
+        gap: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .efe-carousel-arrow {
+        width: 32px;
+        height: 32px;
+    }
+
+    .efe-carousel-arrow svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+/* En dispositivos touch, ocultar flechas (el usuario hace swipe) */
+@media (pointer: coarse) {
+    .efe-carousel-arrow {
+        display: none;
+    }
+
+    .efe-carousel-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .efe-carousel-dot.is-active {
+        width: 32px;
+    }
 }

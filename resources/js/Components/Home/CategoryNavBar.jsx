@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, router } from '@inertiajs/react';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 /* Iconos SVG monocromáticos para cada categoría. */
 const CategoryIcon = ({ name }) => {
@@ -60,6 +61,7 @@ const CategoryIcon = ({ name }) => {
 };
 
 export default function CategoryNavBar({ categorias, onOpenCategories, onSelectCategory }) {
+    const { isMobile } = useDeviceContext();
     const [activeId, setActiveId] = useState(null);
     const [hoverId, setHoverId] = useState(null);
     const barRef = useRef(null);
@@ -80,6 +82,14 @@ export default function CategoryNavBar({ categorias, onOpenCategories, onSelectC
 
     const handleClick = (cat) => {
         setActiveId(cat.id);
+        
+        // En móviles, si la categoría tiene subcategorías, tocarla debería mostrar el menú 
+        // desplegable en lugar de enrutar inmediatamente, para permitir ver el submenú.
+        if (isMobile && cat.subcategorias && cat.subcategorias.length > 0) {
+            setHoverId(hoverId === cat.id ? null : cat.id);
+            return;
+        }
+
         if (onSelectCategory) {
             onSelectCategory(cat);
             return;

@@ -27,7 +27,7 @@ export default function Kardex({ almacen, movimientos, logoUrl }) {
                 </div>
             </div>
 
-            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--admin-shadow-sm)' }}>
+            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflowX: 'auto', boxShadow: 'var(--admin-shadow-sm)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ background: 'var(--admin-bg)', borderBottom: '1px solid var(--admin-border)' }}>
                         <tr>

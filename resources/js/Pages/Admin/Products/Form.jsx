@@ -159,7 +159,7 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '24px' }}>
                     
                     {/* Información Básica */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Nombre del Producto</label>
                             <input 
@@ -182,7 +182,7 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
                     </div>
 
                     {/* Precios, Stock y Marca */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Precio Base (S/)</label>
                             <input 
@@ -349,14 +349,14 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
                     </div>
 
                     {/* Categorías y Estado */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+                    <div className="admin-grid-charts">
                         <div style={{ background: 'var(--admin-bg-panel)', padding: '20px', borderRadius: '12px', border: '1px solid var(--admin-border)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                 <label style={{ display: 'block', margin: 0, fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Categorías del Producto</label>
                                 <button type="button" onClick={() => setShowCatModal(true)} style={{ background: 'var(--admin-bg-body)', color: '#00B4FF', border: '1px solid #00B4FF', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>+ Nueva Categoría</button>
                             </div>
                             
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                                 <div>
                                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--admin-text-muted)' }}>1. Categoría Principal</label>
                                     <select 
@@ -441,7 +441,7 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
             {/* Modal Nueva Categoria */}
             {showCatModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '400px' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '400px' }}>
                         <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>Nueva Categoría</h2>
                         <form onSubmit={handleSaveNewCategory} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div>

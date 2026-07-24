@@ -133,58 +133,34 @@ class DashboardController extends Controller
         }
 
         // Stock: productos con variantes y su stock
-        $productosStock = [];
         $stockBajo = [];
         $totalStock = 0;
         try {
-            $productosConStock = Producto::with(['variantes', 'imagenes', 'marca'])
-                ->orderBy('id', 'desc')
-                ->limit(10)
-                ->get();
-
-            foreach ($productosConStock as $p) {
-                $stock = 0;
-                foreach ($p->variantes as $v) {
-                    $stock += $v->stock;
-                }
-                $totalStock += $stock;
-                $item = [
-                    'id' => $p->id,
-                    'nombre' => $p->nombre,
-                    'marca' => $p->marca ? $p->marca->nombre : null,
-                    'imagen' => $p->imagenes->first() ? $p->imagenes->first()->url : null,
-                    'stock' => $stock,
-                    'activo' => $p->activo,
-                ];
-                $productosStock[] = $item;
-                if ($stock <= 5) {
-                    $stockBajo[] = $item;
-                }
-            }
-
-            // Extend low stock check to all products
+            // Todos los productos ordenados por stock para la lista scrollable
             $allLowStock = DB::select("
                 SELECT p.id, p.nombre, COALESCE(SUM(v.stock), 0) as stock_total
                 FROM producto p
                 LEFT JOIN variante v ON v.producto_id = p.id
                 GROUP BY p.id, p.nombre
-                HAVING stock_total <= 5
                 ORDER BY stock_total ASC
-                LIMIT 8
+                LIMIT 150
             ");
-            if (count($allLowStock) > count($stockBajo)) {
-                $stockBajo = collect($allLowStock)->map(function ($r) {
-                    $p = Producto::with(['imagenes', 'marca'])->find($r->id);
-                    return [
-                        'id' => $r->id,
-                        'nombre' => $r->nombre,
-                        'marca' => $p && $p->marca ? $p->marca->nombre : null,
-                        'imagen' => $p && $p->imagenes->first() ? $p->imagenes->first()->url : null,
-                        'stock' => $r->stock_total,
-                        'activo' => $p ? $p->activo : false,
-                    ];
-                })->toArray();
-            }
+            
+            $productIds = array_column($allLowStock, 'id');
+            $productosData = Producto::with(['imagenes', 'marca'])->whereIn('id', $productIds)->get()->keyBy('id');
+            
+            $stockBajo = collect($allLowStock)->map(function ($r) use ($productosData) {
+                $p = $productosData->get($r->id);
+                return [
+                    'id' => $r->id,
+                    'nombre' => $r->nombre,
+                    'marca' => $p && $p->marca ? $p->marca->nombre : null,
+                    'imagen' => $p && $p->imagenes->first() ? $p->imagenes->first()->url : null,
+                    'stock' => (int) $r->stock_total,
+                    'activo' => $p ? $p->activo : false,
+                ];
+            })->toArray();
+            
         } catch (\Exception $e) {}
 
         // Top Productos Vendidos

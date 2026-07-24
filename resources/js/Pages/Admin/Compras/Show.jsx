@@ -40,7 +40,7 @@ export default function CompraShow({ compra, items, logoUrl }) {
                         </p>
                     </div>
 
-                    <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--admin-shadow-sm)' }}>
+                    <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflowX: 'auto', boxShadow: 'var(--admin-shadow-sm)' }}>
                         <div style={{ padding: '15px 20px', borderBottom: '1px solid var(--admin-border)', fontWeight: 'bold', color: 'var(--admin-text-main)' }}>
                             Productos de la Orden ({items.length} ítems)
                         </div>

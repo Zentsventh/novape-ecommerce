@@ -700,7 +700,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
                     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
                     background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(5px)'
                 }}>
-                    <div style={{ background: 'white', padding: '40px', borderRadius: '16px', width: '400px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ background: 'white', padding: '40px', borderRadius: '16px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
                         <h2 style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--admin-text-main)' }}>
                             <Lock size={20} /> Caja Cerrada
                         </h2>
@@ -734,7 +734,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
                     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
                     background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '450px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
                         <h2 style={{ margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-text-main)' }}>
                             <Lock size={20} /> Arqueo y Cierre de Caja
                         </h2>
@@ -805,7 +805,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
                     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
                     background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '450px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '450px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
                         <h2 style={{ margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--admin-text-main)' }}>
                             <Settings size={20} /> Registrar Movimiento de Caja
                         </h2>
@@ -862,7 +862,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
             {/* Modal de Pagos Mixtos / Checkout */}
             {showCheckoutModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'var(--admin-surface)', padding: '25px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+                    <div style={{ background: 'var(--admin-surface)', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
                         <h2 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '15px', color: 'var(--admin-text-main)' }}>Confirmar Pago</h2>
 
                         <div style={{ background: '#F8FAFC', padding: '15px', borderRadius: '8px', marginBottom: '15px', textAlign: 'center', border: '1px solid #E2E8F0' }}>
@@ -992,7 +992,7 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
                     position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
                     background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'
                 }}>
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '500px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
                         <h2 style={{ margin: '0 0 20px 0', color: 'var(--admin-text-main)' }}>Ventas Pausadas</h2>
                         
                         {ventasPausadas.length === 0 ? (

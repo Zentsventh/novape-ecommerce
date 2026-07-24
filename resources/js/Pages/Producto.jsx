@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Head, usePage, router, Link } from '@inertiajs/react';
 import { fireConfetti } from '../utils/confetti';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 /* Componentes */
 import Header from '../Components/Home/Header';
@@ -26,6 +27,7 @@ const formatPrice = (price) =>
 
 export default function Producto() {
     const { producto, detalles, auth, logoUrl, recomendados, flash, cart, categorias } = usePage().props;
+    const { isMobile } = useDeviceContext();
     const [isCatOpen, setIsCatOpen] = useState(false);
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -610,6 +612,23 @@ export default function Producto() {
                             </Link>
                         ))}
                     </div>
+                </div>
+            )}
+
+            {isMobile && (
+                <div className="sticky-bottom-cta">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: 'bold' }}>S/ {formatPrice(producto?.precio_actual)}</div>
+                        {producto?.precio_anterior > 0 && <div style={{ fontSize: '12px', textDecoration: 'line-through', color: '#9ca3af' }}>S/ {formatPrice(producto?.precio_anterior)}</div>}
+                    </div>
+                    <button 
+                        onClick={(e) => handleBuyNow(false, e)}
+                        className={`efe-producto-btn efe-producto-btn-buy efe-btn-anim ${isAdding ? 'is-adding' : ''}`}
+                        disabled={!producto?.stock || producto.stock <= 0}
+                        style={{ width: '100%', minHeight: '44px' }}
+                    >
+                        {isAdding ? 'Agregando...' : 'Comprar ahora'}
+                    </button>
                 </div>
             )}
 

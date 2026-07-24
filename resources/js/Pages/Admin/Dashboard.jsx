@@ -219,7 +219,9 @@ export default function Dashboard({
                                     <div style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>{prod.marca || 'Sin marca'}</div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <span style={{ color: 'var(--admin-text-main)', fontWeight: 'bold', fontSize: '14px' }}>{prod.stock} u.</span>
+                                    <span style={{ color: prod.stock <= 5 ? '#ef4444' : 'var(--admin-text-main)', fontWeight: 'bold', fontSize: '14px' }}>
+                                        {prod.stock} u.
+                                    </span>
                                 </div>
                             </div>
                         )) : (
@@ -254,7 +256,8 @@ export default function Dashboard({
                         </div>
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div className="overflow-x-auto" style={{ width: '100%', overflowX: 'auto' }}>
+                        <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--admin-border)', color: 'var(--admin-text-muted)' }}>
                                 <th style={{ padding: '10px 0', fontWeight: 'normal' }}>Código</th>
@@ -298,11 +301,12 @@ export default function Dashboard({
                                 );
                             }) : (
                                 <tr>
-                                    <td colSpan="4" style={{ padding: '20px 0', textAlign: 'center', color: 'var(--admin-text-muted)' }}>No hay pedidos recientes.</td>
+                                    <td colSpan="5" style={{ padding: '20px 0', textAlign: 'center', color: 'var(--admin-text-muted)' }}>No hay pedidos recientes.</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
+                    </div>
                 </div>
 
                 {/* Top Productos Más Vendidos */}

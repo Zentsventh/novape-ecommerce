@@ -400,3 +400,71 @@
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.03);
 }
+
+/* ====== RESPONSIVE: TABLET (≤ 1024px) ====== */
+@media (max-width: 1024px) {
+    .auth-content {
+        padding: 40px 20px;
+    }
+
+    .auth-card {
+        padding: 36px;
+    }
+}
+
+/* ====== RESPONSIVE: MOBILE (≤ 768px) ====== */
+@media (max-width: 768px) {
+    .auth-content {
+        padding: 24px 16px;
+    }
+
+    .auth-card {
+        padding: 28px 20px;
+        border-radius: 16px;
+        max-width: 100%;
+    }
+
+    .auth-title {
+        font-size: 22px;
+    }
+
+    .auth-subtitle {
+        font-size: 14px;
+    }
+
+    .auth-input,
+    .auth-select {
+        padding: 12px 14px;
+        font-size: 16px; /* Previene zoom automático en iOS */
+    }
+
+    .auth-btn {
+        padding: 14px;
+        font-size: 15px;
+        min-height: 44px;
+    }
+
+    .btn-google {
+        padding: 14px;
+        font-size: 14px;
+        min-height: 44px;
+    }
+}
+
+/* ====== RESPONSIVE: MOBILE PEQUEÑO (≤ 480px) ====== */
+@media (max-width: 480px) {
+    .auth-content {
+        padding: 16px 12px;
+        align-items: flex-start;
+    }
+
+    .auth-card {
+        padding: 24px 16px;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+
+    .auth-title {
+        font-size: 20px;
+    }
+}

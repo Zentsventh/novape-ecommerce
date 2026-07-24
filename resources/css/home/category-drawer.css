@@ -234,7 +234,7 @@
     }
 
     .efe-cat-drawer-right {
-        width: 280px;
+        width: 300px;
     }
 
     .efe-cat-drawer-sub-list {
@@ -243,12 +243,37 @@
 }
 
 @media (max-width: 480px) {
-    .efe-cat-drawer-right {
-        display: none;
+    .efe-cat-drawer {
+        width: 85vw;
+        max-width: 360px;
+        position: relative;
+        overflow: hidden;
     }
 
     .efe-cat-drawer-left {
-        width: 85vw;
-        max-width: 320px;
+        width: 100%;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .efe-cat-drawer-right {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+        display: flex;
+        background: #fff;
+    }
+
+    .efe-cat-drawer.show-right .efe-cat-drawer-left {
+        transform: translateX(-30%);
+        opacity: 0.5;
+    }
+
+    .efe-cat-drawer.show-right .efe-cat-drawer-right {
+        transform: translateX(0);
     }
 }

@@ -53,7 +53,8 @@ export default function Checkout({ cart = [], total = 0 }) {
         apellidos: user ? (user.apellidos || '') : '',
         tipoDoc: 'DNI',
         doc: user?.dni || '',
-        celular: user?.telefono || ''
+        celular: user?.telefono || '',
+        guardarDireccion: true
     });
     
     const [isCreating, setIsCreating] = useState(false);
@@ -430,69 +431,92 @@ export default function Checkout({ cart = [], total = 0 }) {
                                 <div className="efe-checkout-box">
                                     {!addressSaved ? (
                                         <div className="efe-checkout-address-form" style={{ marginTop: '10px' }}>
-                                            <p style={{ marginBottom: '20px', color: '#4b5563', fontSize: '14px' }}>Completa tus datos de envío para asegurar la entrega de tu pedido.</p>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                                            <div className="efe-address-header-modern">
                                                 <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Nombres *</label>
-                                                    <input type="text" className="efe-form-input" value={addressData.nombres} onChange={e => handleAddressChange('nombres', e.target.value)} />
+                                                    <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: '0 0 5px 0' }}>Datos de Envío</h3>
+                                                    <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>Completa tu información para asegurar una entrega exitosa.</p>
                                                 </div>
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Apellidos *</label>
-                                                    <input type="text" className="efe-form-input" value={addressData.apellidos} onChange={e => handleAddressChange('apellidos', e.target.value)} />
+                                            </div>
+                                            <div className="efe-form-grid-modern">
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Nombres *</label>
+                                                    <input type="text" className="efe-form-input-modern" placeholder="Ej. Juan Pablo" value={addressData.nombres} onChange={e => handleAddressChange('nombres', e.target.value)} />
+                                                </div>
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Apellidos *</label>
+                                                    <input type="text" className="efe-form-input-modern" placeholder="Ej. Vargas" value={addressData.apellidos} onChange={e => handleAddressChange('apellidos', e.target.value)} />
                                                 </div>
                                                 
-                                                <div style={{ gridColumn: '1 / -1' }}>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Dirección Exacta *</label>
-                                                    <input type="text" className="efe-form-input" placeholder="Av, Calle, Jr, Nro, Dpto" value={addressData.direccion} onChange={e => handleAddressChange('direccion', e.target.value)} />
+                                                <div className="efe-form-group efe-col-span-full">
+                                                    <label className="efe-form-label">Dirección Exacta *</label>
+                                                    <div className="efe-input-with-icon">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                                        <input type="text" className="efe-form-input-modern has-icon" placeholder="Av, Calle, Jr, Nro, Dpto" value={addressData.direccion} onChange={e => handleAddressChange('direccion', e.target.value)} />
+                                                    </div>
                                                 </div>
 
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Distrito *</label>
-                                                    <select className="efe-form-select" value={addressData.distrito} onChange={e => handleAddressChange('distrito', e.target.value)}>
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Distrito *</label>
+                                                    <select className="efe-form-select-modern" value={addressData.distrito} onChange={e => handleAddressChange('distrito', e.target.value)}>
                                                         <option value="">Selecciona tu distrito</option>
                                                         {LIMA_DISTRITOS.map(d => <option key={d} value={d}>{d}</option>)}
                                                     </select>
                                                 </div>
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Referencia</label>
-                                                    <input type="text" className="efe-form-input" placeholder="Cerca a..." value={addressData.referencia} onChange={e => handleAddressChange('referencia', e.target.value)} />
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Referencia (Opcional)</label>
+                                                    <input type="text" className="efe-form-input-modern" placeholder="Cerca al parque, casa azul..." value={addressData.referencia} onChange={e => handleAddressChange('referencia', e.target.value)} />
                                                 </div>
 
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Documento *</label>
-                                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                                        <select className="efe-form-select" style={{ width: '90px' }} value={addressData.tipoDoc} onChange={e => { handleAddressChange('tipoDoc', e.target.value); handleAddressChange('doc', ''); }}>
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Documento *</label>
+                                                    <div className="efe-doc-group">
+                                                        <select className="efe-form-select-modern short" value={addressData.tipoDoc} onChange={e => { handleAddressChange('tipoDoc', e.target.value); handleAddressChange('doc', ''); }}>
                                                             <option value="DNI">DNI</option>
                                                             <option value="CE">CE</option>
                                                             <option value="RUC">RUC</option>
                                                         </select>
-                                                        <input type="text" className="efe-form-input" value={addressData.doc} onChange={e => handleAddressChange('doc', e.target.value.replace(/\D/g, '').slice(0, 15))} />
+                                                        <input type="text" className="efe-form-input-modern flex-1" placeholder="Número" value={addressData.doc} onChange={e => handleAddressChange('doc', e.target.value.replace(/\D/g, '').slice(0, 15))} />
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>Celular *</label>
-                                                    <input type="text" className="efe-form-input" value={addressData.celular} onChange={e => handleAddressChange('celular', e.target.value.replace(/\D/g, '').slice(0, 9))} />
+                                                <div className="efe-form-group">
+                                                    <label className="efe-form-label">Celular *</label>
+                                                    <div className="efe-input-with-icon">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                                        <input type="text" className="efe-form-input-modern has-icon" placeholder="987654321" value={addressData.celular} onChange={e => handleAddressChange('celular', e.target.value.replace(/\D/g, '').slice(0, 9))} />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            
-                                            <div style={{ marginTop: '20px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
-                                                <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>Ubicación en el Mapa *</h3>
-                                                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '15px' }}>
-                                                    Verifica tu ubicación. Si el mapa no carga la dirección correcta, presiona "Buscar en mapa" o mueve el pin rojo libremente.
-                                                </p>
-                                                
-                                                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                                                    <button className="efe-btn-outline" onClick={buscarEnMapa} style={{ padding: '8px 15px', fontSize: '13px' }}>
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                                        Buscar en Mapa
-                                                    </button>
-                                                    <button className="efe-btn-outline" onClick={usarGPS} disabled={loadingGps} style={{ padding: '8px 15px', fontSize: '13px', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd' }}>
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-                                                        {loadingGps ? 'Ubicando...' : 'Usar mi ubicación GPS'}
-                                                    </button>
-                                                </div>
 
-                                                <div style={{ height: '250px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #d1d5db', marginBottom: '15px' }}>
+                                            {/* Guardar Dirección Checkbox */}
+                                            {auth?.user && (
+                                                <div className="efe-save-address-wrapper">
+                                                    <label className="efe-custom-checkbox">
+                                                        <input type="checkbox" checked={addressData.guardarDireccion} onChange={e => handleAddressChange('guardarDireccion', e.target.checked)} />
+                                                        <span className="efe-checkmark"></span>
+                                                        <span className="efe-checkbox-text">Guardar esta dirección en mis direcciones para futuras compras</span>
+                                                    </label>
+                                                </div>
+                                            )}
+                                            
+                                            <div style={{ marginTop: '25px', borderTop: '1px solid #f3f4f6', paddingTop: '25px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+
+                                                    <h3 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>Ubicación en el Mapa</h3>
+                                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                                        <button className="efe-btn-outline" onClick={buscarEnMapa} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '20px' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                                            Buscar
+                                                        </button>
+                                                        <button className="efe-btn-outline" onClick={usarGPS} disabled={loadingGps} style={{ padding: '6px 12px', fontSize: '12px', background: '#e0f2fe', color: '#0369a1', borderColor: '#bae6fd', borderRadius: '20px' }}>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '5px' }}><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                                                            {loadingGps ? 'Ubicando...' : 'GPS'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                
+                                                {mapError && <p style={{ color: '#ef4444', fontSize: '12px', marginBottom: '10px' }}>{mapError}</p>}
+
+                                                <div style={{ height: '200px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #d1d5db', marginBottom: '5px' }}>
                                                     <APIProvider apiKey="AIzaSyCqF7-TBcJND7uC63s0qbd0PWU9ZEdE7q8">
                                                         <Map
                                                             style={{width: '100%', height: '100%'}}
@@ -513,27 +537,7 @@ export default function Checkout({ cart = [], total = 0 }) {
                                                         </Map>
                                                     </APIProvider>
                                                 </div>
-
-                                                <div style={{ backgroundColor: '#f9fafb', padding: '15px', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
-                                                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '5px' }}>¿Aún no encuentras tu casa? Ingresa tus coordenadas (Opcional)</label>
-                                                    <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
-                                                        Formato esperado: Latitud, Longitud separados por una coma.<br/>
-                                                        Ejemplo: <strong>-12.047778761857543, -77.05840290487406</strong><br/>
-                                                        <em>(Izquierda = Latitud | Derecha = Longitud)</em>
-                                                    </p>
-                                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                                        <input 
-                                                            type="text" 
-                                                            className="efe-form-input" 
-                                                            placeholder="-12.047..., -77.058..." 
-                                                            value={coordInput} 
-                                                            onChange={e => setCoordInput(e.target.value)} 
-                                                            style={{ flex: 1 }}
-                                                        />
-                                                        <button className="efe-btn-outline" onClick={aplicarCoordenadas} style={{ padding: '8px 15px' }}>Aplicar</button>
-                                                    </div>
-                                                    {mapError && <p style={{ color: '#ef4444', fontSize: '12px', marginTop: '10px' }}>{mapError}</p>}
-                                                </div>
+                                                <p style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center' }}>Mueve el pin rojo para ajustar tu ubicación exacta.</p>
                                             </div>
 
                                             <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end' }}>
@@ -595,29 +599,28 @@ export default function Checkout({ cart = [], total = 0 }) {
                                     </div>
 
                                     <div 
-                                        className="efe-delivery-card"
-                                        style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                                        className={`efe-delivery-card ${deliveryType === 'tienda' ? 'is-active' : ''}`}
+                                        onClick={() => setDeliveryType('tienda')}
                                     >
                                         <div className="efe-delivery-card-content">
                                             <h4 className="efe-delivery-card-title">
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                                                 Retiro en tienda <span className="efe-delivery-card-price" style={{ marginLeft: '4px' }}>Gratis</span>
                                             </h4>
+                                            <div className="efe-delivery-card-desc">
+                                                <span>Recoge tu pedido en nuestra tienda central</span>
+                                            </div>
                                         </div>
                                         <div className="efe-delivery-card-radio"></div>
                                     </div>
 
-                                    <p className="efe-delivery-notice">
-                                        *¿Por qué un mismo producto está en paquetes distintos?<br/>
-                                        <span style={{ color: '#8a2be2', fontWeight: '500' }}>Ver como se agrupan los paquetes.</span><br/>
-                                        (*) Las fechas de entrega o recojo podrían cambiar de acuerdo a la fecha de confirmación del pago.
-                                    </p>
+
 
                                     <button 
-                                        className={deliveryType === 'domicilio' ? "efe-btn-primary" : "efe-btn-outline"}
-                                        style={{ color: deliveryType !== 'domicilio' ? '#d1d5db' : 'white', borderColor: deliveryType !== 'domicilio' ? '#d1d5db' : '' }}
+                                        className={deliveryType ? "efe-btn-primary" : "efe-btn-outline"}
+                                        style={{ color: !deliveryType ? '#d1d5db' : 'white', borderColor: !deliveryType ? '#d1d5db' : '', marginTop: '15px' }}
                                         onClick={handleDeliveryConfirm}
-                                        disabled={deliveryType !== 'domicilio'}
+                                        disabled={!deliveryType}
                                     >
                                         Confirmar y continuar
                                     </button>
@@ -653,7 +656,7 @@ export default function Checkout({ cart = [], total = 0 }) {
                                         <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '10px' }}>Si tienes un cupón de descuento, asegúrate de ingresarlo antes de seleccionar el medio de pago.</p>
                                         
                                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', padding: '15px', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8a2be2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00B4FF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
                                             <span style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>Agrega un cupón de descuento</span>
                                             
                                             <div style={{ display: 'flex', marginLeft: 'auto', gap: '5px' }}>
@@ -670,10 +673,10 @@ export default function Checkout({ cart = [], total = 0 }) {
                                                     <button 
                                                         className="efe-btn-outline" 
                                                         onClick={handleApplyCoupon} 
-                                                        style={{ padding: '5px 15px', borderColor: couponCode ? '#8a2be2' : '#d1d5db', color: couponCode ? '#8a2be2' : '#9ca3af', minWidth: '80px', display: 'flex', justifyContent: 'center' }}
+                                                        style={{ padding: '5px 15px', borderColor: couponCode ? '#00B4FF' : '#d1d5db', color: couponCode ? '#00B4FF' : '#9ca3af', minWidth: '80px', display: 'flex', justifyContent: 'center' }}
                                                         disabled={isApplyingCoupon || !couponCode}
                                                     >
-                                                        {isApplyingCoupon ? <div style={{ width: '14px', height: '14px', border: '2px solid rgba(138,43,226,0.3)', borderTop: '2px solid #8a2be2', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> : 'Aplicar'}
+                                                        {isApplyingCoupon ? <div style={{ width: '14px', height: '14px', border: '2px solid rgba(0,180,255,0.3)', borderTop: '2px solid #00B4FF', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div> : 'Aplicar'}
                                                     </button>
                                                 ) : (
                                                     <button 
@@ -736,12 +739,12 @@ export default function Checkout({ cart = [], total = 0 }) {
                             <h3 style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px', color: '#0f172a' }}>Datos de Facturación</h3>
                             
                             <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                                <label style={{ flex: 1, padding: '10px', border: facturacionData.comprobante === 'Boleta' ? '2px solid #8a2be2' : '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: facturacionData.comprobante === 'Boleta' ? '#f3e8ff' : 'white', fontWeight: facturacionData.comprobante === 'Boleta' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
-                                    <input type="radio" style={{ display: 'none' }} checked={facturacionData.comprobante === 'Boleta'} onChange={() => handleFacturacionChange('comprobante', 'Boleta')} />
+                                <label style={{ flex: 1, padding: '10px', border: facturacionData.comprobante === 'Boleta' ? '2px solid #00B4FF' : '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: facturacionData.comprobante === 'Boleta' ? '#e0f7fa' : 'white', fontWeight: facturacionData.comprobante === 'Boleta' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
+                                    <input type="radio" name="comprobante" value="Boleta" checked={facturacionData.comprobante === 'Boleta'} onChange={() => handleFacturacionChange('comprobante', 'Boleta')} style={{ display: 'none' }} />
                                     Boleta
                                 </label>
-                                <label style={{ flex: 1, padding: '10px', border: facturacionData.comprobante === 'Factura' ? '2px solid #8a2be2' : '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: facturacionData.comprobante === 'Factura' ? '#f3e8ff' : 'white', fontWeight: facturacionData.comprobante === 'Factura' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
-                                    <input type="radio" style={{ display: 'none' }} checked={facturacionData.comprobante === 'Factura'} onChange={() => handleFacturacionChange('comprobante', 'Factura')} />
+                                <label style={{ flex: 1, padding: '10px', border: facturacionData.comprobante === 'Factura' ? '2px solid #00B4FF' : '1px solid #cbd5e1', borderRadius: '8px', textAlign: 'center', cursor: 'pointer', background: facturacionData.comprobante === 'Factura' ? '#e0f7fa' : 'white', fontWeight: facturacionData.comprobante === 'Factura' ? 'bold' : 'normal', transition: 'all 0.2s' }}>
+                                    <input type="radio" name="comprobante" value="Factura" checked={facturacionData.comprobante === 'Factura'} onChange={() => handleFacturacionChange('comprobante', 'Factura')} style={{ display: 'none' }} />
                                     Factura
                                 </label>
                             </div>
@@ -818,9 +821,9 @@ export default function Checkout({ cart = [], total = 0 }) {
                             </div>
                         ))}
 
-                        <Link href="/cart" className="efe-summary-back-link" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#111827', fontSize: '13px', fontWeight: '500', textDecoration: 'underline', marginBottom: '20px' }}>
+                        <Link href="/" className="efe-summary-back-link" style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#111827', fontSize: '13px', fontWeight: '500', textDecoration: 'underline', marginBottom: '20px' }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"></path><polyline points="12 19 5 12 12 5"></polyline></svg>
-                            Regresar al carrito
+                            Regresar a la tienda
                         </Link>
 
                         {/* Totales */}

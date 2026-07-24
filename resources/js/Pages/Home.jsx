@@ -17,6 +17,7 @@ import RecentlyViewed from '../Components/Home/RecentlyViewed';
 import QuickViewModal from '../Components/Home/QuickViewModal';
 import AddToListModal from '../Components/Home/AddToListModal';
 import { router } from '@inertiajs/react';
+import ErrorBoundary from '../Components/ErrorBoundary';
 
 /* Estilos del Home */
 import '../../css/home/base.css';
@@ -92,6 +93,7 @@ export default function Home({ appName, categoriaProductos = [], mejorSemana = [
     };
 
     return (
+        <ErrorBoundary>
         <div className="efe-home">
             <Head>
                 <title>Inicio - NOVAPE</title>
@@ -178,7 +180,7 @@ export default function Home({ appName, categoriaProductos = [], mejorSemana = [
             />
 
             {/* Cintillo 2: Fijo inferior (Fixed bottom) */}
-            <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: '#004797', zIndex: 9999, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: '#004797', zIndex: 9000, display: 'flex', justifyContent: 'center' }}>
                 <Link href="/catalogo?categoria=Retiro+Inmediato" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                     <img 
                         src="/images/cintillo2.webp" 
@@ -188,5 +190,6 @@ export default function Home({ appName, categoriaProductos = [], mejorSemana = [
                 </Link>
             </div>
         </div>
+        </ErrorBoundary>
     );
 }

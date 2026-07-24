@@ -372,7 +372,7 @@ export default function Dashboard({ logoUrl, productos, categorias, demandaRaw, 
                 </div>
 
                 {/* Top KPIs Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
                     {/* Costo Total */}
                     <div style={{ background: 'white', borderRadius: '8px', display: 'flex', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
                         <div style={{ background: '#0082B8', padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -420,7 +420,7 @@ export default function Dashboard({ logoUrl, productos, categorias, demandaRaw, 
                 </div>
 
                 {/* Main Content Grids */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', gridTemplateRows: '300px 200px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '15px', gridAutoRows: '300px' }}>
                     
                     {/* Top Left: Valor de Inventario por Categoria */}
                     <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '15px', display: 'flex', flexDirection: 'column' }}>

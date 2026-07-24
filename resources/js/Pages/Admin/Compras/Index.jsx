@@ -172,7 +172,7 @@ export default function ComprasIndex({ compras, totalGastado, comprasPendientes,
 
             {historialProducto && (
                 /* TABLA DE ANÁLISIS DE PRECIOS POR PRODUCTO (KARDEX DE COMPRAS) */
-                <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--admin-shadow-sm)', border: '1px solid #3b82f6', marginBottom: '20px' }}>
+                <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflowX: 'auto', boxShadow: 'var(--admin-shadow-sm)', border: '1px solid #3b82f6', marginBottom: '20px' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead style={{ background: 'var(--admin-bg)', borderBottom: '1px solid var(--admin-border)' }}>
                             <tr>
@@ -211,7 +211,7 @@ export default function ComprasIndex({ compras, totalGastado, comprasPendientes,
             )}
 
             {/* TABLA GENERAL DE ORDENES DE COMPRA */}
-            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--admin-shadow-sm)' }}>
+            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflowX: 'auto', boxShadow: 'var(--admin-shadow-sm)' }}>
                 {historialProducto && <h3 style={{ margin: '15px 20px 10px 20px', color: 'var(--admin-text-main)', fontSize: '16px' }}>Órdenes de Compra Relacionadas</h3>}
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead style={{ background: 'var(--admin-bg)', borderBottom: '1px solid var(--admin-border)' }}>

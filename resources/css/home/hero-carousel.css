@@ -99,3 +99,42 @@
     background-color: white;
     border-color: white;
 }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 768px) {
+    .efe-hero-arrow {
+        width: 36px;
+        height: 56px;
+    }
+
+    .efe-hero-arrow svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .efe-hero-dots {
+        bottom: 8px;
+        gap: 6px;
+    }
+
+    .efe-hero-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .efe-hero-dot.is-active {
+        width: 22px;
+    }
+}
+
+/* En touch, los dots deben ser más grandes para el pulgar */
+@media (pointer: coarse) {
+    .efe-hero-dot {
+        width: 12px;
+        height: 12px;
+    }
+
+    .efe-hero-dot.is-active {
+        width: 32px;
+    }
+}

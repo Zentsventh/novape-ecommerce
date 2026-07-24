@@ -1,5 +1,7 @@
 /* Estilos de Checkout (Pago) */
-
+:root {
+    --color-primary: #00B4FF;
+}
 .efe-checkout-page {
     background-color: #f3f4f6; /* Fondo gris claro similar a la referencia */
     min-height: 100vh;
@@ -168,7 +170,7 @@
 
 .efe-delivery-card.is-active {
     border-color: var(--color-primary);
-    background-color: #faf5ff;
+    background-color: rgba(0, 180, 255, 0.05);
 }
 
 .efe-delivery-card-radio {
@@ -525,3 +527,215 @@
     font-weight: 500;
     cursor: pointer;
 }
+
+/* --- MODERN CHECKOUT FORM STYLES --- */
+.efe-address-header-modern {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.efe-form-grid-modern {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.efe-col-span-full {
+    grid-column: 1 / -1;
+}
+
+.efe-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.efe-form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+}
+
+.efe-form-input-modern, .efe-form-select-modern {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background-color: #f9fafb;
+    transition: all 0.2s ease-in-out;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02) inset;
+}
+
+.efe-form-input-modern:focus, .efe-form-select-modern:focus {
+    border-color: var(--color-primary);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(0, 180, 255, 0.15);
+}
+
+.efe-form-input-modern::placeholder {
+    color: #9ca3af;
+}
+
+.efe-input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.efe-input-with-icon svg {
+    position: absolute;
+    left: 14px;
+    pointer-events: none;
+}
+
+.efe-form-input-modern.has-icon {
+    padding-left: 42px;
+}
+
+.efe-doc-group {
+    display: flex;
+    gap: 12px;
+}
+
+.efe-form-select-modern.short {
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+/* CUSTOM CHECKBOX (SAVE ADDRESS) */
+.efe-save-address-wrapper {
+    margin-top: 24px;
+    padding: 16px;
+    background-color: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+}
+
+.efe-custom-checkbox {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-left: 32px;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+    color: #334155;
+    font-weight: 500;
+}
+
+.efe-custom-checkbox input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.efe-checkmark {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    height: 22px;
+    width: 22px;
+    background-color: #fff;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.efe-custom-checkbox:hover input ~ .efe-checkmark {
+    border-color: var(--color-primary);
+}
+
+.efe-custom-checkbox input:checked ~ .efe-checkmark {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.efe-checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.efe-custom-checkbox input:checked ~ .efe-checkmark:after {
+    display: block;
+}
+
+.efe-custom-checkbox .efe-checkmark:after {
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+
+.efe-checkbox-text {
+    line-height: 1.4;
+}
+
+/* ====== RESPONSIVE: TABLET (≤ 1024px) ====== */
+@media (max-width: 1024px) {
+    .efe-checkout-container {
+        margin: 24px auto;
+        gap: 20px;
+        padding: 0 16px;
+    }
+}
+
+/* ====== RESPONSIVE: MOBILE (≤ 768px) ====== */
+@media (max-width: 768px) {
+    .efe-checkout-container {
+        flex-direction: column;
+        margin: 16px auto;
+        padding: 0 12px;
+        gap: 16px;
+    }
+
+    .efe-checkout-main, .efe-checkout-sidebar {
+        width: 100%;
+    }
+
+    .efe-form-grid-modern {
+        grid-template-columns: 1fr;
+    }
+
+    .efe-checkout-page {
+        padding-bottom: 100px;
+    }
+}
+
+/* ====== RESPONSIVE: MOBILE PEQUEÑO (≤ 480px) ====== */
+@media (max-width: 480px) {
+    .efe-checkout-container {
+        padding: 0 8px;
+        margin: 10px auto;
+    }
+
+    .efe-checkout-page {
+        padding-bottom: 110px;
+    }
+}
+
+/* Ocultar el badge flotante de Stripe Developer Inspector (solo en test mode localhost) */
+iframe[src*="stripe.com/v3/inspector"],
+iframe[title*="Inspector"],
+iframe[name*="__privateStripeInspector"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+

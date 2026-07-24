@@ -3,12 +3,14 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { LOGO } from './constants';
 import LoginModal from './LoginModal';
 import Swal from 'sweetalert2';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 /* Renderiza la cabecera principal con logo, buscador y acciones. */
 export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, logoUrl, minimal = false, searchQuery = '' }) {
     const currentLogo = logoUrl || LOGO;
     const { auth } = usePage().props;
     const user = auth?.user;
+    const { isMobile, isTablet, isDesktop } = useDeviceContext();
     const [isLoginOpen, setIsLoginOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(searchQuery || '');
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -318,7 +320,8 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                     )}
 
                     {/* Acciones desktop */}
-                    <div className={minimal ? "efe-header-actions" : "efe-header-actions efe-desktop-actions"}>
+                    {!isMobile && (
+                        <div className={minimal ? "efe-header-actions" : "efe-header-actions efe-desktop-actions"}>
 
                         {!minimal && (
                             <Link href="/seguimiento" className="efe-header-action-link">
@@ -420,6 +423,7 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                             </button>
                         )}
                     </div>
+                    )}
 
                     {/* Carrito móvil */}
                     {!minimal && (

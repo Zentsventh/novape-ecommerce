@@ -8,7 +8,7 @@ class Pedido extends Model
 {
     protected $table = 'pedido';
 
-    protected $fillable = ['usuario_id', 'codigo', 'subtotal', 'descuento', 'costo_envio', 'total', 'estado', 'tracking_number', 'courier_name', 'tipo_comprobante', 'documento_cliente', 'nombre_facturacion', 'direccion_facturacion', 'direccion_envio_snapshot'];
+    protected $fillable = ['usuario_id', 'codigo', 'subtotal', 'descuento', 'costo_envio', 'total', 'estado', 'tracking_number', 'courier_name', 'tipo_comprobante', 'documento_cliente', 'nombre_facturacion', 'direccion_facturacion', 'direccion_envio_snapshot', 'cupon_id'];
 
     protected $casts = [
         'subtotal' => 'decimal:2',
@@ -41,5 +41,10 @@ class Pedido extends Model
     public function comprobante()
     {
         return $this->hasOne(Comprobante::class, 'pedido_id');
+    }
+
+    public function cupon()
+    {
+        return $this->belongsTo(Cupon::class, 'cupon_id');
     }
 }

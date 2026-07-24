@@ -75,7 +75,36 @@ class StripePaymentController extends Controller
             $descuentoMonto = 0;
             $couponId = null;
 
+            if (!empty($couponCode)) {
+                $cupon = \App\Models\Cupon::where('codigo', $couponCode)->where('activo', true)->first();
+                if ($cupon) {
+                    $now = now();
+                    $isValid = true;
+                    if ($cupon->fecha_inicio && $now < $cupon->fecha_inicio) $isValid = false;
+                    if ($cupon->fecha_fin && $now > $cupon->fecha_fin) $isValid = false;
+                    if ($cupon->limite_usos && $cupon->usos_actuales >= $cupon->limite_usos) $isValid = false;
+                    if ($cupon->monto_minimo && $total < $cupon->monto_minimo) $isValid = false;
+                    
+                    if ($cupon->unico_por_cliente && auth()->check()) {
+                        $used = \App\Models\Pedido::where('usuario_id', auth()->id())
+                                    ->where('cupon_id', $cupon->id)
+                                    ->where('estado', 'Pagado')
+                                    ->exists();
+                        if ($used) {
+                            return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
+                        }
+                    }
 
+                    if ($isValid) {
+                        $couponId = $cupon->id;
+                        if ($cupon->tipo === 'porcentaje') {
+                            $descuentoMonto = $total * ($cupon->valor / 100);
+                        } else {
+                            $descuentoMonto = $cupon->valor;
+                        }
+                    }
+                }
+            }
 
             $deliveryType = $request->input('deliveryType', '');
             $distrito = $request->input('distrito', '');
@@ -93,6 +122,22 @@ class StripePaymentController extends Controller
 
             // Stripe procesa montos en centavos
             $amountInCents = intval(round($totalConDescuento * 100));
+
+            // Guardar dirección del usuario si lo solicitó
+            if (auth()->check()) {
+                $shippingAddress = $request->input('shippingAddress', []);
+                if (!empty($shippingAddress['guardarDireccion'])) {
+                    \App\Models\DireccionUsuario::firstOrCreate([
+                        'usuario_id' => auth()->id(),
+                        'direccion' => $shippingAddress['direccion'],
+                        'distrito' => $shippingAddress['distrito']
+                    ], [
+                        'referencia' => $shippingAddress['referencia'] ?? '',
+                        'departamento' => 'LIMA',
+                        'provincia' => 'LIMA'
+                    ]);
+                }
+            }
 
             // Bloquear/Reservar el stock temporalmente (15 minutos)
             $sessionId = session()->getId();
@@ -138,7 +183,8 @@ class StripePaymentController extends Controller
                     'documento_cliente' => $request->input('facturacion.dni') ?: $request->input('facturacion.ruc'),
                     'nombre_facturacion' => $request->input('facturacion.comprobante') === 'Factura' ? $request->input('facturacion.razonSocial') : $request->input('facturacion.nombres'),
                     'direccion_facturacion' => $request->input('facturacion.direccionFiscal'),
-                    'direccion_envio_snapshot' => $request->input('shippingAddress', [])
+                    'direccion_envio_snapshot' => $request->input('shippingAddress', []),
+                    'cupon_id' => $couponId
                 ]);
                 foreach ($cart as $item) {
                     $pedido->items()->create([
@@ -158,7 +204,8 @@ class StripePaymentController extends Controller
                     'documento_cliente' => $request->input('facturacion.dni') ?: $request->input('facturacion.ruc'),
                     'nombre_facturacion' => $request->input('facturacion.comprobante') === 'Factura' ? $request->input('facturacion.razonSocial') : $request->input('facturacion.nombres'),
                     'direccion_facturacion' => $request->input('facturacion.direccionFiscal'),
-                    'direccion_envio_snapshot' => $request->input('shippingAddress', [])
+                    'direccion_envio_snapshot' => $request->input('shippingAddress', []),
+                    'cupon_id' => $couponId
                 ]);
                 $pedido->items()->delete();
                 foreach ($cart as $item) {
@@ -251,6 +298,10 @@ class StripePaymentController extends Controller
                         }
 
                         $pedido->update(['estado' => 'Pagado']);
+                        
+                        if ($pedido->cupon_id) {
+                            \App\Models\Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
+                        }
                         
                         foreach ($pedido->items as $item) {
                             if ($item->variante_id) {
@@ -356,6 +407,10 @@ class StripePaymentController extends Controller
 
                         $pedido->update(['estado' => 'Pagado']);
 
+                        if ($pedido->cupon_id) {
+                            \App\Models\Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
+                        }
+
                         // La reducción de stock ha sido delegada completamente al webhook (webhook())
                         // para evitar race conditions y descuentos dobles.
                         
@@ -392,6 +447,59 @@ class StripePaymentController extends Controller
         return Inertia::render('CheckoutSuccess', [
             'pedido' => $codigoPedido,
             'paymentIntentId' => $paymentIntentId
+        ]);
+    }
+
+    public function applyCoupon(Request $request)
+    {
+        $codigo = $request->input('codigo');
+        if (!$codigo) return response()->json(['error' => 'Código no proporcionado'], 400);
+
+        $cupon = \App\Models\Cupon::where('codigo', $codigo)
+            ->where('activo', true)
+            ->first();
+
+        if (!$cupon) {
+            return response()->json(['error' => 'Cupón inválido o inactivo.'], 400);
+        }
+
+        $now = now();
+        if ($cupon->fecha_inicio && $now < $cupon->fecha_inicio) {
+            return response()->json(['error' => 'El cupón aún no es válido.'], 400);
+        }
+        if ($cupon->fecha_fin && $now > $cupon->fecha_fin) {
+            return response()->json(['error' => 'El cupón ha expirado.'], 400);
+        }
+        if ($cupon->limite_usos && $cupon->usos_actuales >= $cupon->limite_usos) {
+            return response()->json(['error' => 'El cupón ha alcanzado su límite de usos.'], 400);
+        }
+
+        if ($cupon->unico_por_cliente && auth()->check()) {
+            $used = \App\Models\Pedido::where('usuario_id', auth()->id())
+                        ->where('cupon_id', $cupon->id)
+                        ->where('estado', 'Pagado')
+                        ->exists();
+            if ($used) {
+                return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
+            }
+        }
+
+        // Calculate subtotal from session cart to check monto_minimo
+        $cart = session()->get('cart', []);
+        $subtotal = 0;
+        foreach ($cart as $item) {
+            $subtotal += ($item['precio'] * $item['cantidad']);
+        }
+
+        if ($cupon->monto_minimo && $subtotal < $cupon->monto_minimo) {
+            return response()->json(['error' => "El monto mínimo para usar este cupón es S/ {$cupon->monto_minimo}"], 400);
+        }
+
+        return response()->json([
+            'id' => $cupon->id,
+            'codigo' => $cupon->codigo,
+            'tipo' => $cupon->tipo,
+            'valor' => $cupon->valor
         ]);
     }
 }

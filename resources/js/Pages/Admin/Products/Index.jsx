@@ -35,7 +35,7 @@ export default function Index({ productos, categorias, marcas, filters }) {
         router.get('/admin/products', { search, categoria_id: categoriaId, marca_id: marcaId, sort: field, direction }, { preserveState: true });
     };
 
-    const getSortIndicator = async (field) => {
+    const getSortIndicator = (field) => {
         if (filters?.sort !== field) return null;
         return filters?.direction === 'asc' ? ' ↑' : ' ↓';
     };

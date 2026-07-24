@@ -160,20 +160,76 @@
     gap: 6px;
 }
 
-.catalogo-marca-item {
+.catalogo-marca-item.efe-custom-radio {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #374151;
+    position: relative;
+    padding-left: 28px;
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-size: 13.5px;
+    user-select: none;
+    color: #4b5563;
+    font-weight: 500;
+    transition: color 0.2s;
+    margin-bottom: 4px;
 }
 
-.catalogo-marca-item input {
-    accent-color: var(--color-primary);
-    width: 16px;
-    height: 16px;
+.catalogo-marca-item.efe-custom-radio:hover {
+    color: var(--color-primary);
+}
+
+.catalogo-marca-item.efe-custom-radio input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.catalogo-marca-item.efe-custom-radio .efe-radio-mark {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    height: 18px;
+    width: 18px;
+    background-color: #fff;
+    border: 2px solid #cbd5e1;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.catalogo-marca-item.efe-custom-radio:hover input ~ .efe-radio-mark {
+    border-color: var(--color-primary);
+}
+
+.catalogo-marca-item.efe-custom-radio input:checked ~ .efe-radio-mark {
+    border-color: var(--color-primary);
+    background-color: #fff;
+}
+
+.efe-radio-mark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.catalogo-marca-item.efe-custom-radio input:checked ~ .efe-radio-mark:after {
+    display: block;
+}
+
+.catalogo-marca-item.efe-custom-radio .efe-radio-mark:after {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-primary);
+}
+
+.catalogo-marca-item.efe-custom-radio .efe-radio-text {
+    line-height: 1.4;
 }
 
 /* Price Range */

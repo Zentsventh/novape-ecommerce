@@ -5,12 +5,14 @@ import {
     CreditCard, Wallet, Archive, Image, Users, Truck, 
     UserCog, Shield, Star, Settings, LogOut, Menu, X, Bell, Eye
 } from 'lucide-react';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 import '../../css/admin/admin.css';
 
 const LOGO_FALLBACK = '/images/logo.png';
 
 export default function AdminLayout({ children, logoUrl }) {
     const { url, props } = usePage();
+    const { isMobile, isTablet } = useDeviceContext();
     const logo = logoUrl || props.logoUrl || LOGO_FALLBACK;
 
     const userPerms = props.auth?.user?.permisos || [];
@@ -89,6 +91,12 @@ export default function AdminLayout({ children, logoUrl }) {
             label: 'Proveedores',
             permission: 'inventario.gestionar',
             icon: <Truck size={20} />,
+        },
+        {
+            href: '/admin/cupones',
+            label: 'Cupones',
+            permission: 'gestionar_cupones',
+            icon: <Package size={20} />,
         },
         {
             href: '/admin/trabajadores',
@@ -172,7 +180,7 @@ export default function AdminLayout({ children, logoUrl }) {
                                 className={`admin-nav-link ${isActive(item) ? 'active' : ''}`}
                                 title={item.label}
                                 onClick={() => {
-                                    if (window.innerWidth <= 768) {
+                                    if (isMobile || isTablet) {
                                         setSidebarOpen(false);
                                     }
                                 }}

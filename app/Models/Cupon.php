@@ -18,6 +18,7 @@ class Cupon extends Model
         'limite_usos',
         'usos_actuales',
         'activo',
+        'unico_por_cliente'
     ];
 
     protected $casts = [

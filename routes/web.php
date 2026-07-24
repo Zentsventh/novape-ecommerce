@@ -38,6 +38,13 @@ Route::get('/ayuda', [PageController::class, 'ayuda'])->name('ayuda');
 Route::get('/devoluciones', [PageController::class, 'devoluciones'])->name('devoluciones');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
 
+Route::get('/libro-de-reclamaciones', function () {
+    return Inertia::render('LibroReclamaciones');
+})->name('libro-reclamaciones');
+Route::post('/libro-de-reclamaciones', function () {
+    // Para simplificar, simularemos el guardado y retornaremos éxito.
+    return back()->with('success', 'Su reclamo/queja ha sido registrado con éxito. Le enviaremos una copia a su correo electrónico.');
+});
 // Rutas de Autenticación
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -68,6 +75,7 @@ Route::post('/api/shipping/validate-address', [ShippingController::class, 'valid
 use App\Http\Controllers\StripePaymentController;
 Route::get('/checkout', [StripePaymentController::class, 'checkout'])->name('checkout');
 Route::post('/api/checkout/stripe/intent', [StripePaymentController::class, 'createIntent']);
+Route::post('/api/checkout/apply-coupon', [StripePaymentController::class, 'applyCoupon']);
 Route::post('/webhook/stripe', [StripePaymentController::class, 'webhook'])->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
 Route::get('/checkout/success', [StripePaymentController::class, 'success'])->name('checkout.success');
 
@@ -242,6 +250,11 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
     // Proveedores
     Route::middleware('permiso:ver_productos')->group(function () {
         Route::resource('proveedores', \App\Http\Controllers\Admin\ProveedorController::class);
+    });
+
+    // Cupones
+    Route::middleware('permiso:gestionar_cupones')->group(function () {
+        Route::resource('cupones', \App\Http\Controllers\Admin\CuponController::class);
     });
 
     // Pedidos

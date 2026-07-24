@@ -13,6 +13,11 @@ class InvoiceController extends Controller
         // 1. Consultar datos del pedido con sus relaciones
         $pedido = Pedido::with(['items.variante.producto', 'usuario'])->findOrFail($pedidoId);
         
+        // Verificar que el pedido pertenece al usuario autenticado o es admin
+        if (\Illuminate\Support\Facades\Auth::id() !== $pedido->usuario_id && !\Illuminate\Support\Facades\Auth::user()->hasRole('admin')) {
+            abort(403, 'No tienes permiso para ver este comprobante.');
+        }
+
         // 2. Definir nombre del archivo
         $filename = 'Comprobante-PED-' . ($pedido->codigo_pedido ?? $pedido->id) . '.pdf';
 

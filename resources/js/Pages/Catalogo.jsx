@@ -11,6 +11,7 @@ import AddToListModal from '../Components/Home/AddToListModal';
 import { fireConfetti } from '../utils/confetti';
 import { DEFAULT_IMAGE } from '../Components/Home/constants';
 import ProductCardSkeleton from '../Components/Home/ProductCardSkeleton';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 import '../../css/home/base.css';
 import '../../css/home/header.css';
@@ -37,8 +38,10 @@ export default function Catalogo({
     lateralBanners = []
 }) {
 	const { cart, flash } = usePage().props;
+    const { isMobile } = useDeviceContext();
 	const [isCartOpen, setIsCartOpen] = useState(false);
 	const [isCatOpen, setIsCatOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [marca, setMarca] = useState(filtros.marca || '');
 	const [precioMin, setPrecioMin] = useState(filtros.precio_min || '');
 	const [precioMax, setPrecioMax] = useState(filtros.precio_max || '');
@@ -187,7 +190,18 @@ export default function Catalogo({
 			<RecentlyViewed />
 
 			<div className="catalogo-layout">
-				<aside className="catalogo-sidebar">
+                {isMobile && isFilterOpen && (
+                    <div className="efe-search-overlay" onClick={() => setIsFilterOpen(false)} style={{ zIndex: 8999 }}></div>
+                )}
+				<aside className={`catalogo-sidebar ${isMobile && isFilterOpen ? 'bottom-sheet-mobile' : ''} ${isMobile && !isFilterOpen ? 'hide-mobile' : ''}`} style={isMobile && isFilterOpen ? { zIndex: 9000, background: '#f3f4f6', padding: '20px', overflowY: 'auto' } : {}}>
+                    {isMobile && isFilterOpen && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Filtros</h2>
+                            <button onClick={() => setIsFilterOpen(false)} style={{ background: 'none', border: 'none', padding: '8px' }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                    )}
 					<div className="catalogo-filter-card">
 						<h3 className="catalogo-filter-title">Categorias</h3>
 						{categorias.length === 0 ? (
@@ -231,20 +245,22 @@ export default function Catalogo({
 								className="catalogo-brand-input"
 							/>
 						</div>
-						<div className="catalogo-brands-list">
-							<label className="catalogo-brand-item">
+						<div className="catalogo-marca-list">
+							<label className="catalogo-marca-item efe-custom-radio">
 								<input type="radio" name="marca" checked={marca === ''} onChange={() => setMarca('')} />
-								<span>Todas las marcas</span>
+								<span className="efe-radio-mark"></span>
+								<span className="efe-radio-text">Todas las marcas</span>
 							</label>
 							{filteredBrands.map((b) => (
-								<label className="catalogo-brand-item" key={b.id}>
+								<label className="catalogo-marca-item efe-custom-radio" key={b.id}>
 									<input 
 										type="radio" 
 										name="marca" 
 										checked={marca === b.nombre}
 										onChange={() => setMarca(b.nombre)}
 									/>
-									<span>{b.nombre}</span>
+									<span className="efe-radio-mark"></span>
+									<span className="efe-radio-text">{b.nombre}</span>
 								</label>
 							))}
 						</div>
@@ -297,8 +313,21 @@ export default function Catalogo({
 
 				<main className="catalogo-main">
 					<div className="catalogo-top-bar">
+                        {isMobile && (
+                            <button 
+                                type="button" 
+                                className="catalogo-btn-primary" 
+                                onClick={() => setIsFilterOpen(true)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px' }}
+                            >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                                </svg>
+                                Filtros
+                            </button>
+                        )}
 						<div className="catalogo-sort-container">
-							<label htmlFor="sort-select">Ordenar por:</label>
+							<label htmlFor="sort-select" className={isMobile ? 'hide-mobile' : ''}>Ordenar por:</label>
 							<select 
 								id="sort-select"
 								value={sort} 
@@ -327,7 +356,7 @@ export default function Catalogo({
 								<option value="precio_asc">Menor precio</option>
 							</select>
 						</div>
-						<div className="catalogo-results-count">
+						<div className="catalogo-results-count hide-mobile">
 							{totalProductos} resultados
 						</div>
 					</div>

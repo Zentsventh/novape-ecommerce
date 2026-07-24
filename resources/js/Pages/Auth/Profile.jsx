@@ -270,8 +270,8 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                 <span>{new Date(pedido.created_at).toLocaleDateString('es-PE', { day: 'numeric', month: 'long' })}</span>
                                 <span>{formatCurrency(pedido.total)}</span>
                             </div>
-                            <div style={{ padding: '25px 20px', display: 'flex', justifyContent: 'space-between' }}>
-                                <div style={{ display: 'flex', gap: '20px' }}>
+                            <div style={{ padding: '25px 20px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                                <div style={{ display: 'flex', gap: '20px', flex: '1 1 250px' }}>
                                     <div>
                                         <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '5px' }}>Compras N° {pedido.codigo}</div>
                                         <div style={{ fontSize: '14px', color: '#333', fontWeight: '500', marginBottom: '15px' }}>
@@ -280,7 +280,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                                 el {new Date(pedido.created_at).toLocaleString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit', hour12: true })}
                                             </span>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '15px' }}>
+                                        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                                             <div style={{ width: '60px', height: '60px', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '5px' }}>
                                                 <img src={imagenUrl} alt="Producto" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                             </div>
@@ -292,13 +292,21 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '200px', padding: '0 20px', borderLeft: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: '1 1 150px', padding: '10px 0', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
                                     <div style={{ fontSize: '12px', color: '#64748b' }}>Vendido por:</div>
                                     <div style={{ fontSize: '13px', color: '#333' }}>{vendedor}</div>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'center', width: '220px', paddingLeft: '20px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', justifyContent: 'center', flex: '1 1 200px' }}>
                                     <Link href={`/perfil/compras/${pedido.codigo}`} style={{ width: '100%', padding: '10px 0', background: '#00B4FF', color: 'white', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>Revisar detalle</Link>
-                                    <button onClick={() => { router.post('/cart/add', { variante_id: primerItem?.variante_id, cantidad: 1 }, { preserveScroll: true }) }} style={{ width: '100%', padding: '10px 0', background: 'white', border: '1px solid #00B4FF', color: '#00B4FF', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Comprar de nuevo</button>
+                                    <button onClick={() => { 
+                                        const prodId = primerItem?.variante?.producto_id || primerItem?.variante?.producto?.id;
+                                        if (prodId) {
+                                            router.post('/cart/add', { producto_id: prodId, cantidad: 1 }, { 
+                                                preserveScroll: true,
+                                                onSuccess: () => window.dispatchEvent(new CustomEvent('open-cart'))
+                                            });
+                                        }
+                                    }} style={{ width: '100%', padding: '10px 0', background: 'white', border: '1px solid #00B4FF', color: '#00B4FF', borderRadius: '24px', textAlign: 'center', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Comprar de nuevo</button>
                                 </div>
                             </div>
                         </div>
@@ -314,7 +322,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
         });
         
         return (
-            <div style={{ width: '260px', flexShrink: 0, background: 'white', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            <div className="efe-profile-sidebar" style={{ flexShrink: 0, background: 'white', borderRadius: '12px', padding: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                 <button onClick={() => changeView('home')} style={getStyles('home')}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     Panel de control
@@ -765,7 +773,7 @@ export default function Profile({ usuario = {}, pedidos = [], direcciones = [], 
             )}
             
             <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', width: '100%', flex: 1 }}>
-                <div style={{ display: 'flex', gap: '30px', flexDirection: 'row', alignItems: 'flex-start' }}>
+                <div className="efe-profile-layout" style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
                     {renderPerfilSidebar()}
                     <div style={{ flex: 1, minWidth: 0 }}>
                         {currentView === 'home' && renderHome()}

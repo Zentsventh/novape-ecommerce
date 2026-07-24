@@ -126,7 +126,9 @@ export default function ProductCard({ product }) {
             </div>
 
             <div className="efe-product-info">
-                <span className="efe-brand-name">{product.marca}</span>
+                <span className="efe-brand-name">
+                    {typeof product.marca === 'object' && product.marca !== null ? product.marca.nombre : product.marca}
+                </span>
                 <h3 className="efe-product-name efe-product-name-click" onClick={() => router.get(`/producto/${product.slug || product.id}`)}>{product.nombre}</h3>
                 <div className="efe-price-row">
                     <span className="efe-price-old">{product.precio_anterior && product.precio_anterior > product.precio_actual ? `S/ ${formatPrice(product.precio_anterior)}` : ''}</span>

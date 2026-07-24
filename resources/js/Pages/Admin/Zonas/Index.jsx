@@ -33,7 +33,7 @@ export default function ZonasIndex({ zonas, logoUrl }) {
                 <button onClick={() => setShowModal(true)} style={{ background: 'var(--admin-primary)', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>+ Nueva Zona</button>
             </div>
 
-            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--admin-shadow-sm)' }}>
+            <div style={{ background: 'var(--admin-card-bg)', borderRadius: '12px', overflowX: 'auto', boxShadow: 'var(--admin-shadow-sm)' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead style={{ background: 'var(--admin-bg)', borderBottom: '1px solid var(--admin-border)' }}>
                         <tr>
@@ -66,7 +66,7 @@ export default function ZonasIndex({ zonas, logoUrl }) {
 
             {showModal && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '420px' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '420px' }}>
                         <h2 style={{ margin: '0 0 20px 0' }}>Nueva Zona de Envío</h2>
                         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div>

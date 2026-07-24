@@ -1,19 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import ProductCard from './ProductCard';
+import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 /* Renderiza un carrusel horizontal de productos con paginación. */
 export default function ProductCarousel({ products }) {
     const [currentPage, setCurrentPage] = useState(0);
     const containerRef = useRef(null);
-    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const { screenWidth, isTouch } = useDeviceContext();
 
-    useEffect(() => {
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    const itemsPerPage = windowWidth < 480 ? 1 : windowWidth < 768 ? 2 : windowWidth < 1024 ? 3 : windowWidth < 1280 ? 4 : 5;
+    const itemsPerPage = screenWidth < 480 ? 1 : screenWidth < 768 ? 2 : screenWidth < 1024 ? 3 : screenWidth < 1280 ? 4 : 5;
     const totalPages = Math.max(1, Math.ceil(products.length / itemsPerPage));
     const gap = 16;
 

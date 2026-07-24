@@ -322,3 +322,39 @@
         width: 70px;
     }
 }
+
+@media (max-width: 768px) {
+    .efe-producto-main {
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .efe-thumb-img {
+        width: 60px;
+    }
+
+    .efe-producto-thumbnails {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 6px;
+    }
+
+    .efe-producto-thumbnails::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .efe-producto-main {
+        padding: 10px;
+        gap: 12px;
+    }
+
+    .efe-thumb-img {
+        width: 50px;
+    }
+
+    .efe-producto-info {
+        padding: 0;
+    }
+}

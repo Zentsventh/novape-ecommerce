@@ -342,12 +342,77 @@
     .efe-btn-cart {
         padding: 8px 12px;
         font-size: 12px;
+        min-height: 44px;
     }
 
     .efe-product-wishlist-btn,
     .efe-product-compare-btn {
         opacity: 1;
         transform: scale(1);
+    }
+}
+
+@media (max-width: 480px) {
+    .efe-product-card {
+        min-width: 150px;
+        max-width: none;
+    }
+
+    .efe-product-img-wrap {
+        height: 130px;
+        padding: 8px;
+    }
+
+    .efe-product-name {
+        font-size: 11px;
+        -webkit-line-clamp: 2;
+    }
+
+    .efe-price-current {
+        font-size: 15px;
+    }
+
+    .efe-price-before {
+        font-size: 11px;
+    }
+
+    .efe-btn-cart {
+        padding: 10px 8px;
+        font-size: 11px;
+    }
+
+    .efe-product-delivery span {
+        font-size: 10px;
+    }
+}
+
+/* ====== CONTAINER QUERIES ====== */
+/* La tarjeta se adapta al tamaño de su contenedor, no de la pantalla */
+.efe-product-card-container {
+    container-type: inline-size;
+}
+
+@container (max-width: 200px) {
+    .efe-product-card {
+        min-width: auto;
+        max-width: none;
+    }
+
+    .efe-product-img-wrap {
+        height: 120px;
+        padding: 6px;
+    }
+
+    .efe-product-name {
+        font-size: 11px;
+    }
+
+    .efe-price-current {
+        font-size: 14px;
+    }
+
+    .efe-btn-cart span {
+        display: none;
     }
 }
 
@@ -358,6 +423,7 @@
 
 /* Skeleton Loader Shimmer */
 .efe-skeleton {
+
     background: #f1f5f9;
     background-image: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 20%, #f1f5f9 40%);
     background-size: 200% 100%;
