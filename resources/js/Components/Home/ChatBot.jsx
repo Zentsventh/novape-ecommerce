@@ -99,7 +99,7 @@ export default function ChatBot() {
                                 />
                             </div>
                             <div className="efe-chat-header-text">
-                                <h4>Novape</h4>
+                                <h4>Novabot</h4>
                                 <div className="efe-chat-online">
                                     <span className="efe-chat-online-dot" />
                                     En línea
@@ -121,9 +121,9 @@ export default function ChatBot() {
                                     alt="Novape Bot"
                                 />
                             </div>
-                            <h5 className="efe-chat-welcome-title">¡Hola! Soy Novape</h5>
+                            <h5 className="efe-chat-welcome-title">¡Hola! Soy Novabot</h5>
                             <p className="efe-chat-welcome-text">
-                                Tu asistente virtual de EFE. Estoy aquí para ayudarte con tus compras, consultas y más.
+                                Tu asistente virtual de Novape. Estoy aquí para ayudarte con tus compras, consultas y más.
                             </p>
                         </div>
 
