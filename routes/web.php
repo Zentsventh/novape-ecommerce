@@ -46,6 +46,14 @@ Route::get('/magic-fix', function () {
     return "Caché limpiada y usuario Admin (admin@novape.com / 12345678) restaurado con éxito. Ya puedes iniciar sesión.";
 });
 
+
+Route::get('/magic-log', function () {
+    $logFile = storage_path('logs/laravel.log');
+    if (!file_exists($logFile)) return "No hay archivo de log.";
+    $lines = file($logFile);
+    $lastLines = array_slice($lines, -100);
+    return "<pre>" . implode("", $lastLines) . "</pre>";
+});
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/catalogo', [HomeController::class, 'catalogo'])->name('catalogo');
 Route::get('/api/search/live', [HomeController::class, 'liveSearch'])->name('api.search.live');
