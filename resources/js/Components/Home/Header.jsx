@@ -37,6 +37,14 @@ export default function Header({
     const [speechSupported, setSpeechSupported] = useState(false);
 
     useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('login') === '1') {
+            setIsLoginOpen(true);
+            // Clean up the URL so it doesn't stay there if they refresh
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }, []);
+    useEffect(() => {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             setSpeechSupported(true);
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
