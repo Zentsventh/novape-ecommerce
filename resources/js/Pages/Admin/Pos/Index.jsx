@@ -4,6 +4,7 @@ import { Lock, FileText, Search, Package, ShoppingCart, Trash2, User, Receipt, D
 import AdminLayout from '../../../Layouts/AdminLayout';
 import '../../../../css/admin/admin.css';
 import { useConfirm } from '@/Contexts/ConfirmContext';
+import Swal from 'sweetalert2';
 
 
 export default function PosIndex({ productos, metodosPago, categorias = [], ventasHoy, ticketsHoy, cajaAbierta, ventasCajaTotal, ventasCajaEfectivo, logoUrl, igv_porcentaje = 18 }) {
@@ -317,10 +318,24 @@ export default function PosIndex({ productos, metodosPago, categorias = [], vent
 
     useEffect(() => {
         if (flash?.error) {
-            alert("Error del servidor: " + flash.error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: flash.error,
+                confirmButtonColor: '#0066cc',
+                confirmButtonText: 'Aceptar'
+            });
         }
         if (flash?.success) {
-            alert(flash.success);
+            Swal.fire({
+                icon: 'success',
+                title: '¡Venta Exitosa!',
+                text: flash.success,
+                confirmButtonColor: '#0066cc',
+                confirmButtonText: 'Aceptar',
+                timer: 3000,
+                timerProgressBar: true
+            });
             if (flash?.venta_id) {
                 window.open(`/admin/pos/ticket/${flash.venta_id}`, '_blank');
             }
