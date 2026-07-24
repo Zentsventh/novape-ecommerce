@@ -246,7 +246,6 @@
     .efe-cat-drawer {
         width: 85vw;
         max-width: 360px;
-        position: relative;
         overflow: hidden;
     }
 
