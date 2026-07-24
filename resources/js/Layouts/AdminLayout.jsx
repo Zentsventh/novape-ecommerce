@@ -171,7 +171,20 @@ export default function AdminLayout({ children, logoUrl }) {
     return (
         <div className="admin-layout">
             {/* Sidebar */}
-            <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
+            <aside 
+                className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}
+                style={(isMobile || isTablet) ? {
+                    position: 'fixed',
+                    top: 0,
+                    bottom: 0,
+                    left: sidebarOpen ? 0 : '-280px',
+                    height: '100dvh',
+                    zIndex: 9999,
+                    width: '280px',
+                    transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    transform: 'none'
+                } : {}}
+            >
                 <div className="admin-brand">
                     <div className="admin-sidebar-header" style={{ padding: '20px 25px' }}>
                         <img src={logo} alt="Logo" className="admin-sidebar-logo" style={{ maxHeight: '40px' }} />
@@ -226,7 +239,21 @@ export default function AdminLayout({ children, logoUrl }) {
             {/* Main Content */}
             <main className="admin-main">
                 {/* Topbar */}
-                <header className="admin-topbar" style={{ background: 'var(--admin-bg-panel)', borderBottom: '1px solid var(--admin-border)' }}>
+                <header 
+                    className="admin-topbar" 
+                    style={{ 
+                        background: 'var(--admin-bg-panel)', 
+                        borderBottom: '1px solid var(--admin-border)',
+                        ...((isMobile || isTablet) ? {
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            width: '100vw',
+                            zIndex: 9990
+                        } : {})
+                    }}
+                >
                     <div className="admin-topbar-left">
                         <button onClick={() => setSidebarOpen(true)} className="admin-topbar-menu">
                             <Menu size={24} />
@@ -295,7 +322,12 @@ export default function AdminLayout({ children, logoUrl }) {
                     </div>
                 </header>
 
-                <div className="admin-content">
+                <div 
+                    className="admin-content"
+                    style={(isMobile || isTablet) ? {
+                        marginTop: 'calc(var(--admin-topbar-height) + 16px)'
+                    } : {}}
+                >
                     {props.flash?.success && (
                         <div style={{ background: '#10B981', color: 'white', padding: '15px 20px', borderRadius: '8px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px rgba(16,185,129,0.2)' }}>
                             <span style={{ fontWeight: 'bold' }}>{props.flash.success}</span>
