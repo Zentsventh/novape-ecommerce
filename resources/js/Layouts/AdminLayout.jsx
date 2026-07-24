@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { 
     LayoutDashboard, MonitorSmartphone, ShoppingCart, Package, 
     CreditCard, Wallet, Archive, Image, Users, Truck, 
@@ -174,20 +174,24 @@ export default function AdminLayout({ children, logoUrl }) {
                 <nav className="admin-nav">
                     {visibleNavItems.map((item, i) => {
                         return (
-                            <Link
+                            <button
                                 key={item.href}
-                                href={item.href}
                                 className={`admin-nav-link ${isActive(item) ? 'active' : ''}`}
                                 title={item.label}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.preventDefault();
                                     if (isMobile || isTablet) {
                                         setSidebarOpen(false);
                                     }
+                                    if (url !== item.href) {
+                                        router.get(item.href);
+                                    }
                                 }}
+                                style={{ border: 'none', background: 'transparent', width: '100%', textAlign: 'left', cursor: 'pointer', outline: 'none' }}
                             >
                                 {item.icon}
                                 <span className="admin-nav-label">{item.label}</span>
-                            </Link>
+                            </button>
                         );
                     })}
                 </nav>
