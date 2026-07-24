@@ -136,7 +136,14 @@ class ProductController extends Controller
         }
 
         if (!empty($validated['categorias'])) {
-            $producto->categorias()->sync($validated['categorias']);
+            $catIds = $validated['categorias'];
+            $allCats = collect($catIds);
+            
+            // Fetch all parents for the given categories
+            $parents = \App\Models\Categoria::whereIn('id', $catIds)->whereNotNull('categoria_padre_id')->pluck('categoria_padre_id');
+            $allCats = $allCats->concat($parents)->unique()->toArray();
+            
+            $producto->categorias()->sync($allCats);
         }
 
         if (!empty($validated['imagenes'])) {
@@ -320,8 +327,17 @@ class ProductController extends Controller
             \Illuminate\Support\Facades\DB::statement("UPDATE variante SET stock = (SELECT COALESCE(SUM(cantidad), 0) FROM stock_almacen WHERE variante_id = ?) WHERE id = ?", [$variante->id, $variante->id]);
         }
 
-        if (isset($validated['categorias'])) {
-            $producto->categorias()->sync($validated['categorias']);
+        if (!empty($validated['categorias'])) {
+            $catIds = $validated['categorias'];
+            $allCats = collect($catIds);
+            
+            // Fetch all parents for the given categories
+            $parents = \App\Models\Categoria::whereIn('id', $catIds)->whereNotNull('categoria_padre_id')->pluck('categoria_padre_id');
+            $allCats = $allCats->concat($parents)->unique()->toArray();
+            
+            $producto->categorias()->sync($allCats);
+        } else {
+            $producto->categorias()->sync([]);
         }
 
         if (isset($validated['imagenes'])) {
