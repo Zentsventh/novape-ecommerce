@@ -217,7 +217,7 @@ export default function AdminLayout({ children, logoUrl }) {
                         width: '100vw',
                         height: '100vh',
                         background: 'rgba(0,0,0,0.5)',
-                        zIndex: 90
+                        zIndex: 9998
                     }}
                 />
             )}
