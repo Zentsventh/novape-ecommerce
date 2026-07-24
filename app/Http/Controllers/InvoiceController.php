@@ -17,7 +17,7 @@ class InvoiceController extends Controller
         $pedido = Pedido::with(['items.variante.producto', 'usuario'])->findOrFail($pedidoId);
 
         // Verificar que el pedido pertenece al usuario autenticado o es admin
-        if (Auth::id() !== $pedido->usuario_id && ! Auth::user()->hasRole('admin')) {
+        if (Auth::id() !== $pedido->usuario_id && ! Auth::user()->esAdmin()) {
             abort(403, 'No tienes permiso para ver este comprobante.');
         }
 

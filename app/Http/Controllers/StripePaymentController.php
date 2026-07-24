@@ -104,13 +104,17 @@ class StripePaymentController extends Controller
                         $isValid = false;
                     }
 
-                    if ($cupon->unico_por_cliente && auth()->check()) {
-                        $used = Pedido::where('usuario_id', auth()->id())
-                            ->where('cupon_id', $cupon->id)
-                            ->where('estado', 'Pagado')
-                            ->exists();
-                        if ($used) {
-                            return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
+                    if ($cupon->unico_por_cliente) {
+                        if (auth()->check()) {
+                            $used = Pedido::where('usuario_id', auth()->id())
+                                ->where('cupon_id', $cupon->id)
+                                ->where('estado', 'Pagado')
+                                ->exists();
+                            if ($used) {
+                                return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
+                            }
+                        } else {
+                            return response()->json(['error' => 'Debes iniciar sesión para usar este cupón exclusivo.'], 400);
                         }
                     }
 
@@ -161,18 +165,40 @@ class StripePaymentController extends Controller
             // Bloquear/Reservar el stock temporalmente (15 minutos)
             $sessionId = session()->getId();
 
-            // Validación de stock sin ReservaStock (modelo no implementado)
-            $stockError = DB::transaction(function () use ($cart) {
+            // Validación de stock con ReservaStock
+            $stockError = DB::transaction(function () use ($cart, $sessionId) {
+                // Primero borrar reservas expiradas (cleanup)
+                ReservaStock::where('expires_at', '<', now())->delete();
+
                 foreach ($cart as $item) {
                     $varianteId = $item['variante_id'] ?? null;
                     if ($varianteId) {
-                        // BLOQUEO PESIMISTA: lockForUpdate() bloquea la fila hasta que termine la transacción
                         $variante = Variante::lockForUpdate()->find($varianteId);
-                        $stockActual = $variante ? $variante->stock : 0;
+                        $stockReal = $variante ? $variante->stock : 0;
 
-                        if ($item['cantidad'] > $stockActual) {
-                            return "Stock insuficiente para el producto: {$item['nombre']}. Solo quedan {$stockActual} unidades disponibles.";
+                        // Restar reservas activas de otras sesiones
+                        $reservado = ReservaStock::where('variante_id', $varianteId)
+                            ->where('session_id', '!=', $sessionId)
+                            ->sum('cantidad');
+                        
+                        $stockDisponible = max(0, $stockReal - $reservado);
+
+                        if ($item['cantidad'] > $stockDisponible) {
+                            return "Stock insuficiente para el producto: {$item['nombre']}. Solo quedan {$stockDisponible} unidades disponibles.";
                         }
+                    }
+                }
+                
+                // Si todo está OK, crear o actualizar mis reservas
+                ReservaStock::where('session_id', $sessionId)->delete();
+                foreach ($cart as $item) {
+                    if (isset($item['variante_id'])) {
+                        ReservaStock::create([
+                            'session_id' => $sessionId,
+                            'variante_id' => $item['variante_id'],
+                            'cantidad' => $item['cantidad'],
+                            'expires_at' => now()->addMinutes(15) // Bloquear por 15 minutos mientras paga en Stripe
+                        ]);
                     }
                 }
 

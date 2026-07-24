@@ -1,4 +1,4 @@
-name: Deploy to cPanel
+name: Deploy to Azure VM
 
 on:
   push:
@@ -7,83 +7,13 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy
     runs-on: ubuntu-latest
     steps:
-    - name: Descargar código fuente
-      uses: actions/checkout@v4
-
-    - name: Configurar PHP 8.2
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.2'
-        
-    - name: Instalar dependencias de PHP (Composer)
-      run: composer install --ignore-platform-reqs --optimize-autoloader --no-dev
-
-    - name: Configurar Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Instalar dependencias de JS y Compilar (Vite)
-      run: |
-        npm install
-        npm run build
-
-    - name: Preparar carpetas para el despliegue
-      run: |
-        mkdir -p deploy_root
-        mkdir -p deploy_public
-        
-        # Copiar código (sin vendor, node_modules, git, tests ni archivos temporales)
-        rsync -a \
-          --exclude='.git' \
-          --exclude='.github' \
-          --exclude='deploy_root' \
-          --exclude='deploy_public' \
-          --exclude='node_modules' \
-          --exclude='tests' \
-          --exclude='vendor' \
-          --exclude='*.zip' \
-          --exclude='storage/logs/*' \
-          --exclude='storage/app/public/*' \
-          ./ deploy_root/
-        
-        # Separar archivos públicos (excluyendo .htaccess para no pisar la config de cPanel)
-        rsync -a --exclude='.htaccess' deploy_root/public/ deploy_public/
-        rm -rf deploy_root/public
-
-    - name: 🚀 Empaquetar y Desplegar
-      run: |
-        # Organizar en la estructura de cPanel
-        mkdir -p to_zip/novape
-        mkdir -p to_zip/public_html
-        
-        cp -r deploy_root/* to_zip/novape/
-        cp -r deploy_public/* to_zip/public_html/
-        
-        # Comprimir todo en un solo archivo
-        cd to_zip
-        zip -r -q ../deploy.zip .
-        cd ..
-        
-        echo "📦 Tamaño del paquete: $(du -h deploy.zip | cut -f1)"
-        
-        # Enviar al servidor por HTTP (sin depender de FTP)
-        RESPONSE=$(curl -s -w "\n%{http_code}" --max-time 120 \
-          -X POST \
-          -F "deploy_file=@deploy.zip" \
-          "https://novape.me/deployer.php?key=novape_super_secreto_2026")
-        
-        HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-        BODY=$(echo "$RESPONSE" | head -1)
-        
-        echo "🌐 Respuesta del servidor: $BODY (HTTP $HTTP_CODE)"
-        
-        if [[ "$BODY" == DEPLOY_SUCCESS* ]]; then
-          echo "✅ ¡Despliegue exitoso!"
-        else
-          echo "❌ Error en el despliegue"
-          exit 1
-        fi
+      - name: Conectando al servidor y actualizando
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            sh /var/www/mi_tienda/deploy.sh

@@ -86,7 +86,7 @@ class ProfileController extends Controller
         $usuario = Auth::user();
         
         // Generar código de 6 dígitos
-        $codigo = (string) rand(100000, 999999);
+        $codigo = (string) random_int(100000, 999999);
         
         // Guardar en sesión por 10 minutos
         Session::put('phone_update_otp', $codigo);
