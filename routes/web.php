@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AnaliticasController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\ChatbotController;
 
 // Nuevos controladores de Admin
 use App\Http\Controllers\Admin\DashboardController;
@@ -29,6 +30,9 @@ Route::get('/api/search/live', [HomeController::class, 'liveSearch'])->name('api
 Route::get('/producto/{slug}', [HomeController::class, 'producto'])->name('producto');
 Route::get('/seguimiento', [HomeController::class, 'seguimiento'])->name('seguimiento');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+// ChatBot Route
+Route::post('/chatbot/message', [ChatbotController::class, 'message'])->name('chatbot.message');
 
 Route::get('/nosotros', [PageController::class, 'nosotros'])->name('nosotros');
 Route::get('/trabaja-con-nosotros', [PageController::class, 'trabajaConNosotros'])->name('trabaja');
