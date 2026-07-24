@@ -93,9 +93,10 @@ body { background: var(--admin-bg); margin: 0; padding: 0; }
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh;
     z-index: 100;
-    overflow-y: auto;
     overflow-x: hidden;
+    /* Removed overflow-y: auto to keep brand and footer fixed */
 }
 
 /* Override any hover-expand behavior — sidebar is always open */
@@ -1079,10 +1080,9 @@ select.admin-form-input { appearance: auto; cursor: pointer; }
     .admin-topbar-menu { display: block; }
 
     .admin-topbar {
-        position: fixed !important;
-        width: 100vw !important;
+        position: sticky !important;
+        width: 100% !important;
         top: 0 !important;
-        left: 0 !important;
         z-index: 9990 !important;
         padding: 0 16px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -1090,7 +1090,6 @@ select.admin-form-input { appearance: auto; cursor: pointer; }
     
     .admin-content {
         padding: 16px;
-        margin-top: calc(var(--admin-topbar-height) + 16px) !important;
     }
     
     .pos-grid {
