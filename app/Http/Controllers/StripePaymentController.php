@@ -2,13 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Stripe\Stripe;
-use Stripe\PaymentIntent;
-use Stripe\Webhook;
+use App\Jobs\SendOrderConfirmationJob;
+use App\Jobs\SendWhatsAppNotification;
+use App\Models\ConfiguracionSitio;
+use App\Models\Cupon;
+use App\Models\DireccionUsuario;
 use App\Models\Pedido;
+use App\Models\ReservaStock;
+use App\Models\Variante;
+use App\Services\SunatService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Stripe\Exception\SignatureVerificationException;
+use Stripe\PaymentIntent;
+use Stripe\Stripe;
+use Stripe\Webhook;
 
 class StripePaymentController extends Controller
 {
@@ -37,7 +48,7 @@ class StripePaymentController extends Controller
 
         return Inertia::render('Checkout', [
             'cart' => array_values($cart),
-            'montoTotal' => $monto
+            'montoTotal' => $monto,
         ]);
     }
 
@@ -52,7 +63,7 @@ class StripePaymentController extends Controller
             foreach ($cart as $key => &$item) {
                 // Re-validar el precio directamente desde la base de datos por seguridad
                 if (isset($item['variante_id'])) {
-                    $variante = \App\Models\Variante::find($item['variante_id']);
+                    $variante = Variante::find($item['variante_id']);
                     if ($variante) {
                         $item['precio'] = (float) $variante->precio;
                     }
@@ -60,7 +71,7 @@ class StripePaymentController extends Controller
                 $total += ($item['precio'] * $item['cantidad']);
             }
             unset($item); // romper referencia
-            
+
             // Guardar carrito actualizado en caso haya correcciones de precio
             session(['cart' => $cart]);
 
@@ -70,26 +81,34 @@ class StripePaymentController extends Controller
 
             $couponCode = $request->input('coupon');
             $shippingCost = $request->input('shippingCost', 0);
-            
+
             // Validar cupones
             $descuentoMonto = 0;
             $couponId = null;
 
-            if (!empty($couponCode)) {
-                $cupon = \App\Models\Cupon::where('codigo', $couponCode)->where('activo', true)->first();
+            if (! empty($couponCode)) {
+                $cupon = Cupon::where('codigo', $couponCode)->where('activo', true)->first();
                 if ($cupon) {
                     $now = now();
                     $isValid = true;
-                    if ($cupon->fecha_inicio && $now < $cupon->fecha_inicio) $isValid = false;
-                    if ($cupon->fecha_fin && $now > $cupon->fecha_fin) $isValid = false;
-                    if ($cupon->limite_usos && $cupon->usos_actuales >= $cupon->limite_usos) $isValid = false;
-                    if ($cupon->monto_minimo && $total < $cupon->monto_minimo) $isValid = false;
-                    
+                    if ($cupon->fecha_inicio && $now < $cupon->fecha_inicio) {
+                        $isValid = false;
+                    }
+                    if ($cupon->fecha_fin && $now > $cupon->fecha_fin) {
+                        $isValid = false;
+                    }
+                    if ($cupon->limite_usos && $cupon->usos_actuales >= $cupon->limite_usos) {
+                        $isValid = false;
+                    }
+                    if ($cupon->monto_minimo && $total < $cupon->monto_minimo) {
+                        $isValid = false;
+                    }
+
                     if ($cupon->unico_por_cliente && auth()->check()) {
-                        $used = \App\Models\Pedido::where('usuario_id', auth()->id())
-                                    ->where('cupon_id', $cupon->id)
-                                    ->where('estado', 'Pagado')
-                                    ->exists();
+                        $used = Pedido::where('usuario_id', auth()->id())
+                            ->where('cupon_id', $cupon->id)
+                            ->where('estado', 'Pagado')
+                            ->exists();
                         if ($used) {
                             return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
                         }
@@ -110,7 +129,7 @@ class StripePaymentController extends Controller
             $distrito = $request->input('distrito', '');
             $costoEnvio = 0;
             if ($deliveryType === 'domicilio' && $distrito) {
-                $costoEnvio = (float) \App\Models\ConfiguracionSitio::obtener('envio_tarifa_plana', 15);
+                $costoEnvio = (float) ConfiguracionSitio::obtener('envio_tarifa_plana', 15);
             }
 
             $totalConDescuento = max(0, $total - $descuentoMonto) + $costoEnvio;
@@ -126,36 +145,37 @@ class StripePaymentController extends Controller
             // Guardar dirección del usuario si lo solicitó
             if (auth()->check()) {
                 $shippingAddress = $request->input('shippingAddress', []);
-                if (!empty($shippingAddress['guardarDireccion'])) {
-                    \App\Models\DireccionUsuario::firstOrCreate([
+                if (! empty($shippingAddress['guardarDireccion'])) {
+                    DireccionUsuario::firstOrCreate([
                         'usuario_id' => auth()->id(),
                         'direccion' => $shippingAddress['direccion'],
-                        'distrito' => $shippingAddress['distrito']
+                        'distrito' => $shippingAddress['distrito'],
                     ], [
                         'referencia' => $shippingAddress['referencia'] ?? '',
                         'departamento' => 'LIMA',
-                        'provincia' => 'LIMA'
+                        'provincia' => 'LIMA',
                     ]);
                 }
             }
 
             // Bloquear/Reservar el stock temporalmente (15 minutos)
             $sessionId = session()->getId();
-            
+
             // Validación de stock sin ReservaStock (modelo no implementado)
-            $stockError = \Illuminate\Support\Facades\DB::transaction(function () use ($cart) {
+            $stockError = DB::transaction(function () use ($cart) {
                 foreach ($cart as $item) {
                     $varianteId = $item['variante_id'] ?? null;
                     if ($varianteId) {
                         // BLOQUEO PESIMISTA: lockForUpdate() bloquea la fila hasta que termine la transacción
-                        $variante = \App\Models\Variante::lockForUpdate()->find($varianteId);
+                        $variante = Variante::lockForUpdate()->find($varianteId);
                         $stockActual = $variante ? $variante->stock : 0;
-                        
+
                         if ($item['cantidad'] > $stockActual) {
                             return "Stock insuficiente para el producto: {$item['nombre']}. Solo quedan {$stockActual} unidades disponibles.";
                         }
                     }
                 }
+
                 return null; // Todo OK
             });
 
@@ -164,13 +184,13 @@ class StripePaymentController extends Controller
             }
 
             $codigoPedido = session('checkout_pedido');
-            if (!$codigoPedido) {
-                $codigoPedido = 'PED-' . date('ymd') . '-' . strtoupper(\Illuminate\Support\Str::random(6));
+            if (! $codigoPedido) {
+                $codigoPedido = 'PED-'.date('ymd').'-'.strtoupper(Str::random(6));
             }
-            
+
             // Crear o actualizar Pedido en estado Pendiente
             $pedido = Pedido::where('codigo', $codigoPedido)->first();
-            if (!$pedido) {
+            if (! $pedido) {
                 $pedido = Pedido::create([
                     'usuario_id' => auth()->id(),
                     'codigo' => $codigoPedido,
@@ -184,13 +204,13 @@ class StripePaymentController extends Controller
                     'nombre_facturacion' => $request->input('facturacion.comprobante') === 'Factura' ? $request->input('facturacion.razonSocial') : $request->input('facturacion.nombres'),
                     'direccion_facturacion' => $request->input('facturacion.direccionFiscal'),
                     'direccion_envio_snapshot' => $request->input('shippingAddress', []),
-                    'cupon_id' => $couponId
+                    'cupon_id' => $couponId,
                 ]);
                 foreach ($cart as $item) {
                     $pedido->items()->create([
                         'variante_id' => $item['variante_id'] ?? null,
                         'cantidad' => $item['cantidad'],
-                        'precio_unitario' => $item['precio']
+                        'precio_unitario' => $item['precio'],
                     ]);
                 }
             } elseif ($pedido->estado === 'Pendiente') {
@@ -205,24 +225,24 @@ class StripePaymentController extends Controller
                     'nombre_facturacion' => $request->input('facturacion.comprobante') === 'Factura' ? $request->input('facturacion.razonSocial') : $request->input('facturacion.nombres'),
                     'direccion_facturacion' => $request->input('facturacion.direccionFiscal'),
                     'direccion_envio_snapshot' => $request->input('shippingAddress', []),
-                    'cupon_id' => $couponId
+                    'cupon_id' => $couponId,
                 ]);
                 $pedido->items()->delete();
                 foreach ($cart as $item) {
                     $pedido->items()->create([
                         'variante_id' => $item['variante_id'] ?? null,
                         'cantidad' => $item['cantidad'],
-                        'precio_unitario' => $item['precio']
+                        'precio_unitario' => $item['precio'],
                     ]);
                 }
             }
 
             session([
-                'checkout_pedido' => $codigoPedido, 
+                'checkout_pedido' => $codigoPedido,
                 'checkout_monto' => $totalConDescuento,
                 'checkout_cupon_id' => $couponId,
                 'checkout_email' => $request->input('email'),
-                'checkout_facturacion' => $request->input('facturacion')
+                'checkout_facturacion' => $request->input('facturacion'),
             ]);
 
             // Crear el PaymentIntent
@@ -242,11 +262,12 @@ class StripePaymentController extends Controller
             return response()->json([
                 'clientSecret' => $paymentIntent->client_secret,
                 'codigoPedido' => $codigoPedido,
-                'monto' => $totalConDescuento
+                'monto' => $totalConDescuento,
             ]);
-            
+
         } catch (\Exception $e) {
-            Log::error('Error creando Stripe PaymentIntent: ' . $e->getMessage());
+            Log::error('Error creando Stripe PaymentIntent: '.$e->getMessage());
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -258,8 +279,9 @@ class StripePaymentController extends Controller
     {
         $endpoint_secret = env('STRIPE_WEBHOOK_SECRET');
 
-        if (!$endpoint_secret) {
+        if (! $endpoint_secret) {
             Log::error('Webhook Stripe: Falta STRIPE_WEBHOOK_SECRET en .env');
+
             return response('Server Configuration Error', 500);
         }
 
@@ -270,54 +292,57 @@ class StripePaymentController extends Controller
         try {
             // Validación estricta obligatoria
             $event = Webhook::constructEvent($payload, $sig_header, $endpoint_secret);
-        } catch(\UnexpectedValueException $e) {
+        } catch (\UnexpectedValueException $e) {
             Log::error('Webhook Stripe: Payload inválido');
+
             return response('Invalid payload', 400);
-        } catch(\Stripe\Exception\SignatureVerificationException $e) {
+        } catch (SignatureVerificationException $e) {
             Log::error('Webhook Stripe: Firma inválida');
+
             return response('Invalid signature', 400);
         }
 
         // Manejar el evento de pago exitoso
         if ($event->type == 'payment_intent.succeeded') {
-            $paymentIntent = $event->data->object; 
-            
+            $paymentIntent = $event->data->object;
+
             $codigoPedido = $paymentIntent->metadata->codigo_pedido ?? null;
             $montoSoles = $paymentIntent->amount / 100;
             $userId = $paymentIntent->metadata->user_id ?? null;
 
             if ($codigoPedido) {
-                $errorResponse = \Illuminate\Support\Facades\DB::transaction(function () use ($codigoPedido, $montoSoles, $paymentIntent) {
+                $errorResponse = DB::transaction(function () use ($codigoPedido, $montoSoles, $paymentIntent) {
                     $pedido = Pedido::with('items')->where('codigo', $codigoPedido)->lockForUpdate()->first();
-                    
+
                     if ($pedido && $pedido->estado === 'Pendiente') {
                         // Validar monto para evitar manipulaciones
                         if (abs($montoSoles - $pedido->total) > 0.01) {
                             Log::warning("Webhook Stripe: Monto pagado ($montoSoles) no coincide con total del pedido {$pedido->codigo} ({$pedido->total}).");
+
                             return response('Monto inválido', 400);
                         }
 
                         $pedido->update(['estado' => 'Pagado']);
-                        
+
                         if ($pedido->cupon_id) {
-                            \App\Models\Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
+                            Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
                         }
-                        
+
                         foreach ($pedido->items as $item) {
                             if ($item->variante_id) {
-                                $variante = \App\Models\Variante::lockForUpdate()->find($item->variante_id);
+                                $variante = Variante::lockForUpdate()->find($item->variante_id);
                                 if ($variante) {
-                                    $almacenEcommerceId = (int) \App\Models\ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
-                                    
-                                    $stockAlmacen = \Illuminate\Support\Facades\DB::table('stock_almacen')
+                                    $almacenEcommerceId = (int) ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
+
+                                    $stockAlmacen = DB::table('stock_almacen')
                                         ->where('variante_id', $item->variante_id)
                                         ->where('almacen_id', $almacenEcommerceId)
                                         ->first();
-                    
+
                                     if ($stockAlmacen) {
-                                        \Illuminate\Support\Facades\DB::table('stock_almacen')->where('id', $stockAlmacen->id)->decrement('cantidad', $item->cantidad);
+                                        DB::table('stock_almacen')->where('id', $stockAlmacen->id)->decrement('cantidad', $item->cantidad);
                                     } else {
-                                        \Illuminate\Support\Facades\DB::table('stock_almacen')->insert([
+                                        DB::table('stock_almacen')->insert([
                                             'almacen_id' => $almacenEcommerceId,
                                             'variante_id' => $item->variante_id,
                                             'cantidad' => 0 - $item->cantidad,
@@ -325,17 +350,17 @@ class StripePaymentController extends Controller
                                             'updated_at' => now(),
                                         ]);
                                     }
-                    
+
                                     // Recalcular variante.stock global
-                                    \Illuminate\Support\Facades\DB::statement("UPDATE variante SET stock = (SELECT COALESCE(SUM(cantidad), 0) FROM stock_almacen WHERE variante_id = ?) WHERE id = ?", [$item->variante_id, $item->variante_id]);
+                                    DB::statement('UPDATE variante SET stock = (SELECT COALESCE(SUM(cantidad), 0) FROM stock_almacen WHERE variante_id = ?) WHERE id = ?', [$item->variante_id, $item->variante_id]);
 
                                     // Registrar Kardex
-                                    \Illuminate\Support\Facades\DB::table('movimientos_almacen')->insert([
+                                    DB::table('movimientos_almacen')->insert([
                                         'almacen_id' => $almacenEcommerceId,
                                         'variante_id' => $item->variante_id,
                                         'tipo' => 'salida',
                                         'cantidad' => -$item->cantidad,
-                                        'referencia' => 'Venta Ecommerce Stripe - ' . $pedido->codigo,
+                                        'referencia' => 'Venta Ecommerce Stripe - '.$pedido->codigo,
                                         'usuario_id' => $pedido->usuario_id ?? 1,
                                         'created_at' => now(),
                                         'updated_at' => now(),
@@ -346,54 +371,56 @@ class StripePaymentController extends Controller
 
                         // Emitir Comprobante (Boleta/Factura) SUNAT automáticamente
                         try {
-                            $sunatService = new \App\Services\SunatService();
+                            $sunatService = new SunatService;
                             $sunatService->emitirComprobante($pedido);
                         } catch (\Exception $e) {
-                            Log::error("Error emitiendo comprobante SUNAT para pedido {$pedido->codigo}: " . $e->getMessage());
+                            Log::error("Error emitiendo comprobante SUNAT para pedido {$pedido->codigo}: ".$e->getMessage());
                         }
-                        
+
                         // Enviar correo de confirmación (Asíncrono para no bloquear Webhook)
                         $emailTo = $paymentIntent->metadata->email ?? ($pedido->usuario ? $pedido->usuario->email : null);
                         if ($emailTo) {
-                            \App\Jobs\SendOrderConfirmationJob::dispatch($pedido->id, $emailTo);
+                            SendOrderConfirmationJob::dispatch($pedido->id, $emailTo);
                         }
 
                         Log::info("Pedido $codigoPedido procesado exitosamente vía Webhook de Stripe.");
+
                         return null; // Exito
                     } else {
                         Log::info("Pedido $codigoPedido ya estaba pagado o no fue encontrado.");
+
                         return null;
                     }
                 });
-                
+
                 if ($errorResponse) {
                     return $errorResponse;
                 }
             }
         } else {
-            Log::info('Webhook Stripe: Evento recibido no procesado: ' . $event->type);
+            Log::info('Webhook Stripe: Evento recibido no procesado: '.$event->type);
         }
 
         return response('Webhook Handled', 200);
     }
-    
+
     public function success(Request $request)
     {
         $paymentIntentId = $request->query('payment_intent');
         $codigoPedido = session('checkout_pedido');
-        
+
         $pedido = Pedido::where('codigo', $codigoPedido)->first();
         $usuario = auth()->user();
 
         if ($pedido) {
             $errorResponse = null;
             if ($pedido->estado === 'Pendiente') {
-                $errorResponse = \Illuminate\Support\Facades\DB::transaction(function () use ($pedido, $paymentIntentId, $codigoPedido) {
+                $errorResponse = DB::transaction(function () use ($pedido, $paymentIntentId, $codigoPedido) {
                     $pedido = Pedido::where('codigo', $codigoPedido)->lockForUpdate()->first();
                     if ($pedido && $pedido->estado === 'Pendiente') {
                         // Verificar con Stripe el estado real del PaymentIntent para evitar vulnerabilidad de "Fake Success"
                         try {
-                            $intent = \Stripe\PaymentIntent::retrieve($paymentIntentId);
+                            $intent = PaymentIntent::retrieve($paymentIntentId);
                             if ($intent->status !== 'succeeded') {
                                 return redirect('/checkout')->with('error', 'El pago no ha sido completado exitosamente según Stripe.');
                             }
@@ -401,34 +428,37 @@ class StripePaymentController extends Controller
                                 return redirect('/checkout')->with('error', 'El monto pagado no coincide con el total del pedido.');
                             }
                         } catch (\Exception $e) {
-                            Log::error("Error validando success: " . $e->getMessage());
+                            Log::error('Error validando success: '.$e->getMessage());
+
                             return redirect('/checkout')->with('error', 'Error al verificar el estado del pago con la pasarela.');
                         }
 
                         $pedido->update(['estado' => 'Pagado']);
 
                         if ($pedido->cupon_id) {
-                            \App\Models\Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
+                            Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
                         }
 
                         // La reducción de stock ha sido delegada completamente al webhook (webhook())
                         // para evitar race conditions y descuentos dobles.
-                        
-                        \App\Models\ReservaStock::where('session_id', session()->getId())->delete();
+
+                        ReservaStock::where('session_id', session()->getId())->delete();
+
                         return true; // We changed state
                     }
+
                     return false; // Already paid
                 });
-                
+
                 if ($errorResponse === true) {
                     // Nosotros cambiamos el estado, enviamos correos
                     $correoDestino = session('checkout_email') ?: ($usuario ? $usuario->email : null);
                     if ($correoDestino) {
-                        \App\Jobs\SendOrderConfirmationJob::dispatch($pedido->id, $correoDestino);
+                        SendOrderConfirmationJob::dispatch($pedido->id, $correoDestino);
                     }
-                    if ($usuario && !empty($usuario->telefono)) {
+                    if ($usuario && ! empty($usuario->telefono)) {
                         $mensaje = "¡Hola {$usuario->nombres}! Tu pedido {$pedido->codigo} ha sido confirmado por un total de S/ {$pedido->total}. ¡Gracias por comprar en NOVAPE!";
-                        \App\Jobs\SendWhatsAppNotification::dispatch($usuario->telefono, $mensaje);
+                        SendWhatsAppNotification::dispatch($usuario->telefono, $mensaje);
                     }
                 } elseif (is_string($errorResponse) || is_object($errorResponse)) {
                     // It returned an error redirect response
@@ -436,30 +466,32 @@ class StripePaymentController extends Controller
                 }
             }
         }
-        
+
         session()->forget('cart');
         session()->forget(['checkout_monto', 'checkout_pedido', 'checkout_cupon_id', 'checkout_email']);
-        
+
         if ($usuario && $usuario->carrito) {
             $usuario->carrito->items()->delete();
         }
-        
+
         return Inertia::render('CheckoutSuccess', [
             'pedido' => $codigoPedido,
-            'paymentIntentId' => $paymentIntentId
+            'paymentIntentId' => $paymentIntentId,
         ]);
     }
 
     public function applyCoupon(Request $request)
     {
         $codigo = $request->input('codigo');
-        if (!$codigo) return response()->json(['error' => 'Código no proporcionado'], 400);
+        if (! $codigo) {
+            return response()->json(['error' => 'Código no proporcionado'], 400);
+        }
 
-        $cupon = \App\Models\Cupon::where('codigo', $codigo)
+        $cupon = Cupon::where('codigo', $codigo)
             ->where('activo', true)
             ->first();
 
-        if (!$cupon) {
+        if (! $cupon) {
             return response()->json(['error' => 'Cupón inválido o inactivo.'], 400);
         }
 
@@ -475,10 +507,10 @@ class StripePaymentController extends Controller
         }
 
         if ($cupon->unico_por_cliente && auth()->check()) {
-            $used = \App\Models\Pedido::where('usuario_id', auth()->id())
-                        ->where('cupon_id', $cupon->id)
-                        ->where('estado', 'Pagado')
-                        ->exists();
+            $used = Pedido::where('usuario_id', auth()->id())
+                ->where('cupon_id', $cupon->id)
+                ->where('estado', 'Pagado')
+                ->exists();
             if ($used) {
                 return response()->json(['error' => 'Ya has utilizado este cupón en una compra anterior.'], 400);
             }
@@ -499,7 +531,7 @@ class StripePaymentController extends Controller
             'id' => $cupon->id,
             'codigo' => $cupon->codigo,
             'tipo' => $cupon->tipo,
-            'valor' => $cupon->valor
+            'valor' => $cupon->valor,
         ]);
     }
 }

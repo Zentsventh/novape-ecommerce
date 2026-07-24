@@ -6,7 +6,14 @@ import Swal from 'sweetalert2';
 import { useDeviceContext } from '@/Contexts/DeviceContext';
 
 /* Renderiza la cabecera principal con logo, buscador y acciones. */
-export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, logoUrl, minimal = false, searchQuery = '' }) {
+export default function Header({
+    cartCount = 0,
+    onOpenCart,
+    onOpenCategories,
+    logoUrl,
+    minimal = false,
+    searchQuery = '',
+}) {
     const currentLogo = logoUrl || LOGO;
     const { auth } = usePage().props;
     const user = auth?.user;
@@ -15,28 +22,28 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
     const [searchTerm, setSearchTerm] = useState(searchQuery || '');
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
-
-    // Ref for Speech Recognition
     const recognitionRef = useRef(null);
 
-    // Live search states
-    const [liveResults, setLiveResults] = useState({ productos: [], marcas: [], categorias: [], sugerencias: [] });
+    const [liveResults, setLiveResults] = useState({
+        productos: [],
+        marcas: [],
+        categorias: [],
+        sugerencias: [],
+    });
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-    
-    // Voice Search states
+
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
 
     useEffect(() => {
-        
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             setSpeechSupported(true);
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SpeechRecognition();
             recognition.lang = 'es-PE';
             recognition.continuous = false; // Fix: continuous=true causes immediate abort on HTTP/Localhost in some browsers
-            recognition.interimResults = true; 
+            recognition.interimResults = true;
             recognition.maxAlternatives = 1;
 
             recognition.onstart = () => {
@@ -52,25 +59,41 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
             };
 
             recognition.onerror = (event) => {
-                console.error("Speech recognition error", event.error);
+                console.error('Speech recognition error', event.error);
                 if (event.error === 'not-allowed') {
-                    Swal.fire({text: 'Permiso de micrófono denegado. Permite el acceso al micrófono en la barra de direcciones.', icon: 'warning', confirmButtonColor: '#00B4FF'});
+                    Swal.fire({
+                        text: 'Permiso de micrófono denegado. Permite el acceso al micrófono en la barra de direcciones.',
+                        icon: 'warning',
+                        confirmButtonColor: '#00B4FF',
+                    });
                 } else if (event.error === 'network') {
-                    Swal.fire({text: 'Error de red: Tu navegador (como Brave) o tu Antivirus/Adblocker está bloqueando la conexión al servidor de reconocimiento de voz. Usa Chrome/Edge o desactiva los escudos de privacidad para esta función.', icon: 'error', confirmButtonColor: '#00B4FF'});
+                    Swal.fire({
+                        text: 'Error de red: Tu navegador (como Brave) o tu Antivirus/Adblocker está bloqueando la conexión al servidor de reconocimiento de voz. Usa Chrome/Edge o desactiva los escudos de privacidad para esta función.',
+                        icon: 'error',
+                        confirmButtonColor: '#00B4FF',
+                    });
                 } else {
-                    Swal.fire({text: `El reconocimiento de voz se detuvo: ${event.error}`, icon: 'info', confirmButtonColor: '#00B4FF'});
+                    Swal.fire({
+                        text: `El reconocimiento de voz se detuvo: ${event.error}`,
+                        icon: 'info',
+                        confirmButtonColor: '#00B4FF',
+                    });
                 }
                 setIsListening(false);
             };
 
             recognition.onend = () => {
                 setIsListening(false);
-                // Automáticamente buscar si hay texto cuando se cierra
                 setTimeout(() => {
                     const inputVal = document.getElementById('main-search-input')?.value;
-                    if (inputVal && inputVal.trim() && isListening) { // Only if it was actively listening
+                    if (inputVal && inputVal.trim() && isListening) {
+                        // Only if it was actively listening
                         setShowSearchDropdown(false);
-                        router.get('/catalogo', { q: inputVal.trim() }, { preserveScroll: true, preserveState: true });
+                        router.get(
+                            '/catalogo',
+                            { q: inputVal.trim() },
+                            { preserveScroll: true, preserveState: true }
+                        );
                     }
                 }, 300);
             };
@@ -87,7 +110,7 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
 
     const toggleListening = () => {
         if (!recognitionRef.current) return;
-        
+
         if (isListening) {
             recognitionRef.current.stop();
         } else {
@@ -110,12 +133,12 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
         const timer = setTimeout(() => {
             setIsSearching(true);
             fetch(`/api/search/live?q=${encodeURIComponent(searchTerm)}`)
-                .then(res => res.json())
-                .then(data => {
+                .then((res) => res.json())
+                .then((data) => {
                     setLiveResults(data);
                     setShowSearchDropdown(true);
                 })
-                .catch(err => console.error(err))
+                .catch((err) => console.error(err))
                 .finally(() => setIsSearching(false));
         }, 300);
 
@@ -126,8 +149,6 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
         setSearchTerm(searchQuery || '');
     }, [searchQuery]);
 
-
-
     const handleLogout = (e) => {
         e.preventDefault();
         router.post('/logout');
@@ -137,7 +158,10 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
         e.preventDefault();
         setShowSearchDropdown(false);
         const term = searchTerm.trim();
-        router.get('/catalogo', term ? { q: term } : {}, { preserveScroll: true, preserveState: true });
+        router.get('/catalogo', term ? { q: term } : {}, {
+            preserveScroll: true,
+            preserveState: true,
+        });
     };
 
     const handleSearchBlur = (e) => {
@@ -161,10 +185,20 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
         <header className="efe-header">
             <div className={minimal ? 'efe-header-gradient is-minimal' : 'efe-header-gradient'}>
                 <div className={minimal ? 'efe-header-main is-minimal' : 'efe-header-main'}>
-                    {/* Menú móvil */}
                     {!minimal && (
-                        <button className="efe-header-hamburger efe-mobile-only" onClick={onOpenCategories}>
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round">
+                        <button
+                            className="efe-header-hamburger efe-mobile-only"
+                            onClick={onOpenCategories}
+                        >
+                            <svg
+                                width="26"
+                                height="26"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                            >
                                 <line x1="3" y1="6" x2="21" y2="6" />
                                 <line x1="3" y1="12" x2="21" y2="12" />
                                 <line x1="3" y1="18" x2="21" y2="18" />
@@ -172,14 +206,14 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                         </button>
                     )}
 
-                    {/* Logo */}
                     <Link href="/" className="efe-header-logo-link">
-                        <img className={minimal ? 'efe-header-logo is-minimal' : 'efe-header-logo'} src={currentLogo} alt="Novape" />
+                        <img
+                            className={minimal ? 'efe-header-logo is-minimal' : 'efe-header-logo'}
+                            src={currentLogo}
+                            alt="Novape"
+                        />
                     </Link>
 
-
-
-                    {/* Buscador */}
                     {!minimal && (
                         <div className="efe-header-search-wrap" style={{ position: 'relative' }}>
                             <form className="efe-header-search" onSubmit={handleSearchSubmit}>
@@ -190,30 +224,45 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                                     placeholder="¿Qué estás buscando?"
                                     value={searchTerm}
                                     onChange={(event) => setSearchTerm(event.target.value)}
-                                    onFocus={() => { if (liveResults.length > 0) setShowSearchDropdown(true); }}
+                                    onFocus={() => {
+                                        if (liveResults.length > 0) setShowSearchDropdown(true);
+                                    }}
                                     onBlur={handleSearchBlur}
                                     aria-label="Buscar productos"
-                                    style={{ 
+                                    style={{
                                         paddingRight: '80px',
                                         backgroundColor: isListening ? '#fef2f2' : '#ffffff',
                                         borderColor: isListening ? '#ef4444' : 'transparent',
-                                        transition: 'all 0.3s ease'
+                                        transition: 'all 0.3s ease',
                                     }}
                                 />
                                 {isSearching ? (
-                                    <div style={{ position: 'absolute', right: '90px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', border: '2px solid rgba(0,0,0,0.1)', borderTop: '2px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            right: '90px',
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            width: '20px',
+                                            height: '20px',
+                                            border: '2px solid rgba(0,0,0,0.1)',
+                                            borderTop: '2px solid #2563eb',
+                                            borderRadius: '50%',
+                                            animation: 'spin 1s linear infinite',
+                                        }}
+                                    ></div>
                                 ) : null}
-                                
+
                                 {speechSupported && (
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={toggleListening}
                                         className={`efe-header-voice-btn ${isListening ? 'is-listening' : ''}`}
                                         aria-label="Búsqueda por voz"
-                                        style={{ 
-                                            position: 'absolute', 
-                                            right: '50px', 
-                                            top: '50%', 
+                                        style={{
+                                            position: 'absolute',
+                                            right: '50px',
+                                            top: '50%',
                                             transform: 'translateY(-50%)',
                                             background: 'none',
                                             border: 'none',
@@ -222,13 +271,22 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                                             alignItems: 'center',
                                             justifyContent: 'center',
                                             color: isListening ? '#ef4444' : '#6b7280',
-                                            padding: '8px'
+                                            padding: '8px',
                                         }}
                                     >
                                         {isListening ? (
                                             <span className="voice-pulse-ring"></span>
                                         ) : null}
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
                                             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                                             <line x1="12" y1="19" x2="12" y2="22"></line>
@@ -236,200 +294,444 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                                     </button>
                                 )}
 
-                                <button className="efe-header-search-btn" type="submit" aria-label="Buscar">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                                <button
+                                    className="efe-header-search-btn"
+                                    type="submit"
+                                    aria-label="Buscar"
+                                >
+                                    <svg
+                                        width="20"
+                                        height="20"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="white"
+                                        strokeWidth="2.5"
+                                        strokeLinecap="round"
+                                    >
                                         <circle cx="11" cy="11" r="8" />
                                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                     </svg>
                                 </button>
                             </form>
-                            
+
                             {showSearchDropdown && (
                                 <>
-                                <div className="efe-search-overlay" onClick={() => setShowSearchDropdown(false)}></div>
-                                <div className="efe-search-dropdown efe-megamenu">
-                                    {(liveResults?.productos?.length > 0 || liveResults?.sugerencias?.length > 0) ? (
-                                        <div className="efe-megamenu-container">
-                                            <div className="efe-megamenu-sidebar">
-                                                {liveResults?.sugerencias?.length > 0 && (
-                                                    <div className="efe-megamenu-section">
-                                                        <h5 className="efe-megamenu-title">Búsquedas sugeridas</h5>
-                                                        <ul className="efe-megamenu-list">
-                                                            {liveResults.sugerencias.map((sug, i) => (
-                                                                <li key={i}><Link href={`/catalogo?q=${encodeURIComponent(sug)}`}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> {sug}</Link></li>
-                                                            ))}
-                                                        </ul>
-                                                    </div>
-                                                )}
-                                                {liveResults?.marcas?.length > 0 && (
-                                                    <div className="efe-megamenu-section">
-                                                        <h5 className="efe-megamenu-title">Marcas</h5>
-                                                        <div className="efe-megamenu-chips">
-                                                            {liveResults.marcas.map((m, i) => (
-                                                                <Link key={i} href={`/catalogo?q=${searchTerm}&marca=${encodeURIComponent(m)}`} className="efe-megamenu-chip">{m}</Link>
-                                                            ))}
+                                    <div
+                                        className="efe-search-overlay"
+                                        onClick={() => setShowSearchDropdown(false)}
+                                    ></div>
+                                    <div className="efe-search-dropdown efe-megamenu">
+                                        {liveResults?.productos?.length > 0 ||
+                                        liveResults?.sugerencias?.length > 0 ? (
+                                            <div className="efe-megamenu-container">
+                                                <div className="efe-megamenu-sidebar">
+                                                    {liveResults?.sugerencias?.length > 0 && (
+                                                        <div className="efe-megamenu-section">
+                                                            <h5 className="efe-megamenu-title">
+                                                                Búsquedas sugeridas
+                                                            </h5>
+                                                            <ul className="efe-megamenu-list">
+                                                                {liveResults.sugerencias.map(
+                                                                    (sug, i) => (
+                                                                        <li key={i}>
+                                                                            <Link
+                                                                                href={`/catalogo?q=${encodeURIComponent(sug)}`}
+                                                                            >
+                                                                                <svg
+                                                                                    width="14"
+                                                                                    height="14"
+                                                                                    viewBox="0 0 24 24"
+                                                                                    fill="none"
+                                                                                    stroke="currentColor"
+                                                                                    strokeWidth="2"
+                                                                                >
+                                                                                    <circle
+                                                                                        cx="11"
+                                                                                        cy="11"
+                                                                                        r="8"
+                                                                                    ></circle>
+                                                                                    <line
+                                                                                        x1="21"
+                                                                                        y1="21"
+                                                                                        x2="16.65"
+                                                                                        y2="16.65"
+                                                                                    ></line>
+                                                                                </svg>{' '}
+                                                                                {sug}
+                                                                            </Link>
+                                                                        </li>
+                                                                    )
+                                                                )}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    {liveResults?.marcas?.length > 0 && (
+                                                        <div className="efe-megamenu-section">
+                                                            <h5 className="efe-megamenu-title">
+                                                                Marcas
+                                                            </h5>
+                                                            <div className="efe-megamenu-chips">
+                                                                {liveResults.marcas.map((m, i) => (
+                                                                    <Link
+                                                                        key={i}
+                                                                        href={`/catalogo?q=${searchTerm}&marca=${encodeURIComponent(m)}`}
+                                                                        className="efe-megamenu-chip"
+                                                                    >
+                                                                        {m}
+                                                                    </Link>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {liveResults?.categorias?.length > 0 && (
+                                                        <div className="efe-megamenu-section">
+                                                            <h5 className="efe-megamenu-title">
+                                                                Categorías
+                                                            </h5>
+                                                            <ul className="efe-megamenu-list">
+                                                                {liveResults.categorias.map(
+                                                                    (c, i) => (
+                                                                        <li key={i}>
+                                                                            <Link
+                                                                                href={`/catalogo?categoria=${encodeURIComponent(c)}`}
+                                                                            >
+                                                                                {c}
+                                                                            </Link>
+                                                                        </li>
+                                                                    )
+                                                                )}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="efe-megamenu-products">
+                                                    <div className="efe-megamenu-header">
+                                                        <h4>Productos para "{searchTerm}"</h4>
+                                                        <div
+                                                            className="efe-search-all-link"
+                                                            onClick={handleSearchSubmit}
+                                                        >
+                                                            Ver todos los resultados &rarr;
                                                         </div>
                                                     </div>
-                                                )}
-                                                {liveResults?.categorias?.length > 0 && (
-                                                    <div className="efe-megamenu-section">
-                                                        <h5 className="efe-megamenu-title">Categorías</h5>
-                                                        <ul className="efe-megamenu-list">
-                                                            {liveResults.categorias.map((c, i) => (
-                                                                <li key={i}><Link href={`/catalogo?categoria=${encodeURIComponent(c)}`}>{c}</Link></li>
-                                                            ))}
-                                                        </ul>
+                                                    <div className="efe-megamenu-grid">
+                                                        {liveResults.productos.map((prod) => {
+                                                            const isOffer = Math.random() > 0.6;
+                                                            const offerLabels = [
+                                                                '-50%',
+                                                                'Oferta Relámpago',
+                                                                'Envío Gratis',
+                                                                'Últimos',
+                                                            ];
+                                                            const randomLabel =
+                                                                offerLabels[
+                                                                    Math.floor(
+                                                                        Math.random() *
+                                                                            offerLabels.length
+                                                                    )
+                                                                ];
+                                                            return (
+                                                                <Link
+                                                                    key={prod.id}
+                                                                    href={`/producto/${prod.slug || prod.id}`}
+                                                                    className="efe-megamenu-card"
+                                                                >
+                                                                    {isOffer && (
+                                                                        <span className="efe-megamenu-badge">
+                                                                            {randomLabel}
+                                                                        </span>
+                                                                    )}
+                                                                    <div className="efe-megamenu-card-img">
+                                                                        <img
+                                                                            src={
+                                                                                prod.imagen ||
+                                                                                '/storage/default.png'
+                                                                            }
+                                                                            alt={prod.nombre}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="efe-megamenu-card-info">
+                                                                        <span className="brand">
+                                                                            {prod.marca || 'NovaPe'}
+                                                                        </span>
+                                                                        <h5 className="title">
+                                                                            {prod.nombre}
+                                                                        </h5>
+                                                                        <span className="price">
+                                                                            S/{' '}
+                                                                            {new Intl.NumberFormat(
+                                                                                'es-PE',
+                                                                                {
+                                                                                    minimumFractionDigits: 2,
+                                                                                }
+                                                                            ).format(
+                                                                                prod.precio_actual
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
+                                                                </Link>
+                                                            );
+                                                        })}
                                                     </div>
-                                                )}
-                                            </div>
-                                            <div className="efe-megamenu-products">
-                                                <div className="efe-megamenu-header">
-                                                    <h4>Productos para "{searchTerm}"</h4>
-                                                    <div className="efe-search-all-link" onClick={handleSearchSubmit}>Ver todos los resultados &rarr;</div>
-                                                </div>
-                                                <div className="efe-megamenu-grid">
-                                                    {liveResults.productos.map(prod => {
-                                                        const isOffer = Math.random() > 0.6;
-                                                        const offerLabels = ['-50%', 'Oferta Relámpago', 'Envío Gratis', 'Últimos'];
-                                                        const randomLabel = offerLabels[Math.floor(Math.random() * offerLabels.length)];
-                                                        return (
-                                                        <Link key={prod.id} href={`/producto/${prod.slug || prod.id}`} className="efe-megamenu-card">
-                                                            {isOffer && <span className="efe-megamenu-badge">{randomLabel}</span>}
-                                                            <div className="efe-megamenu-card-img">
-                                                                <img src={prod.imagen || '/storage/default.png'} alt={prod.nombre} />
-                                                            </div>
-                                                            <div className="efe-megamenu-card-info">
-                                                                <span className="brand">{prod.marca || 'NovaPe'}</span>
-                                                                <h5 className="title">{prod.nombre}</h5>
-                                                                <span className="price">S/ {new Intl.NumberFormat('es-PE', {minimumFractionDigits: 2}).format(prod.precio_actual)}</span>
-                                                            </div>
-                                                        </Link>
-                                                    )})}
                                                 </div>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="efe-search-empty">
-                                            No se encontraron resultados para "{searchTerm}"
-                                        </div>
-                                    )}
-                                </div>
+                                        ) : (
+                                            <div className="efe-search-empty">
+                                                No se encontraron resultados para "{searchTerm}"
+                                            </div>
+                                        )}
+                                    </div>
                                 </>
                             )}
                         </div>
                     )}
 
-                    {/* Acciones desktop */}
                     {!isMobile && (
-                        <div className={minimal ? "efe-header-actions" : "efe-header-actions efe-desktop-actions"}>
+                        <div
+                            className={
+                                minimal
+                                    ? 'efe-header-actions'
+                                    : 'efe-header-actions efe-desktop-actions'
+                            }
+                        >
+                            {!minimal && (
+                                <Link href="/seguimiento" className="efe-header-action-link">
+                                    <div className="efe-header-action-icon">
+                                        <svg
+                                            width="26"
+                                            height="26"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="white"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M3 6h18v4a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V6z" />
+                                            <path d="M4 10v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10" />
+                                            <path d="M12 14v8" />
+                                        </svg>
+                                    </div>
+                                    <span className="efe-header-icon-text">Sigue tu pedido</span>
+                                </Link>
+                            )}
 
-                        {!minimal && (
-                            <Link href="/seguimiento" className="efe-header-action-link">
-                                <div className="efe-header-action-icon">
-                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M3 6h18v4a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V6z" />
-                                        <path d="M4 10v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10" />
-                                        <path d="M12 14v8" />
-                                    </svg>
+                            {user ? (
+                                <div
+                                    className={`efe-user-dropdown ${isUserMenuOpen ? 'is-open' : ''}`}
+                                    onFocus={() => setIsUserMenuOpen(true)}
+                                    onBlur={handleUserBlur}
+                                    onKeyDown={handleUserKeyDown}
+                                >
+                                    {minimal ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                            className="efe-header-user-minimal"
+                                            aria-haspopup="menu"
+                                            aria-expanded={isUserMenuOpen}
+                                        >
+                                            <svg
+                                                width="26"
+                                                height="26"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="white"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
+                                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                <circle cx="12" cy="7" r="4" />
+                                            </svg>
+                                            <div className="efe-header-user-minimal-text">
+                                                <span>Hola</span>
+                                                <span className="efe-header-user-minimal-name">
+                                                    {user.nombres.split(' ')[0]}{' '}
+                                                    {user.apellidos?.split(' ')[0] || ''}
+                                                </span>
+                                            </div>
+                                            <svg
+                                                width="14"
+                                                height="14"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="white"
+                                                strokeWidth="2.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="efe-header-user-minimal-caret"
+                                            >
+                                                <polyline points="6 9 12 15 18 9"></polyline>
+                                            </svg>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                            className="efe-header-action-link efe-header-action-btn"
+                                            aria-haspopup="menu"
+                                            aria-expanded={isUserMenuOpen}
+                                        >
+                                            <div className="efe-header-action-icon">
+                                                <svg
+                                                    width="26"
+                                                    height="26"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="white"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                >
+                                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                                    <circle cx="12" cy="7" r="4" />
+                                                </svg>
+                                            </div>
+                                            <span className="efe-header-icon-text">
+                                                {user.nombres.split(' ')[0]}
+                                            </span>
+                                        </button>
+                                    )}
+                                    <div className="efe-dropdown-menu" role="menu">
+                                        <Link
+                                            href="/perfil"
+                                            className="efe-dropdown-item"
+                                            role="menuitem"
+                                            onClick={() => setIsUserMenuOpen(false)}
+                                        >
+                                            Mi cuenta
+                                        </Link>
+                                        <Link
+                                            href="/perfil?tab=compras"
+                                            className="efe-dropdown-item"
+                                            role="menuitem"
+                                            onClick={() => setIsUserMenuOpen(false)}
+                                        >
+                                            Mis órdenes
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            className="efe-dropdown-item efe-dropdown-item-button"
+                                            role="menuitem"
+                                        >
+                                            Cerrar sesión
+                                        </button>
+                                    </div>
                                 </div>
-                                <span className="efe-header-icon-text">Sigue tu pedido</span>
-                            </Link>
-                        )}
-                        
-                        {user ? (
-                            <div
-                                className={`efe-user-dropdown ${isUserMenuOpen ? 'is-open' : ''}`}
-                                onFocus={() => setIsUserMenuOpen(true)}
-                                onBlur={handleUserBlur}
-                                onKeyDown={handleUserKeyDown}
-                            >
-                                {minimal ? (
-                                    <button type="button" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="efe-header-user-minimal" aria-haspopup="menu" aria-expanded={isUserMenuOpen}>
-                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                            <circle cx="12" cy="7" r="4" />
-                                        </svg>
-                                        <div className="efe-header-user-minimal-text">
-                                            <span>Hola</span>
-                                            <span className="efe-header-user-minimal-name">{user.nombres.split(' ')[0]} {user.apellidos?.split(' ')[0] || ''}</span>
-                                        </div>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="efe-header-user-minimal-caret">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                        </svg>
-                                    </button>
-                                ) : (
-                                    <button type="button" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="efe-header-action-link efe-header-action-btn" aria-haspopup="menu" aria-expanded={isUserMenuOpen}>
+                            ) : (
+                                <div
+                                    className={`efe-user-dropdown ${isUserMenuOpen ? 'is-open' : ''}`}
+                                    onFocus={() => setIsUserMenuOpen(true)}
+                                    onBlur={handleUserBlur}
+                                    onKeyDown={handleUserKeyDown}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                                        className="efe-header-action-link efe-header-action-btn"
+                                    >
                                         <div className="efe-header-action-icon">
-                                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <svg
+                                                width="26"
+                                                height="26"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="white"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
                                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                                 <circle cx="12" cy="7" r="4" />
                                             </svg>
                                         </div>
-                                        <span className="efe-header-icon-text">{user.nombres.split(' ')[0]}</span>
+                                        <span className="efe-header-icon-text">Cuenta</span>
                                     </button>
-                                )}
-                                <div className="efe-dropdown-menu" role="menu">
-                                    <Link href="/perfil" className="efe-dropdown-item" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>Mi cuenta</Link>
-                                    <Link href="/perfil?tab=compras" className="efe-dropdown-item" role="menuitem" onClick={() => setIsUserMenuOpen(false)}>Mis órdenes</Link>
-                                    <button type="button" onClick={handleLogout} className="efe-dropdown-item efe-dropdown-item-button" role="menuitem">Cerrar sesión</button>
+                                    <div
+                                        className="efe-dropdown-menu efe-dropdown-mega"
+                                        role="menu"
+                                    >
+                                        <div className="efe-dropdown-mega-left">
+                                            <h4>Bienvenido</h4>
+                                            <p>
+                                                Inicia sesión y podrás consultar el estado de tus
+                                                pedidos, tu libreta de direcciones y todo lo que
+                                                necesites.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsLoginOpen(true);
+                                                    setIsUserMenuOpen(false);
+                                                }}
+                                                className="efe-btn-login-mega"
+                                            >
+                                                Iniciar sesión
+                                            </button>
+                                        </div>
+                                        <div className="efe-dropdown-mega-right">
+                                            <h4>¿Quieres una experiencia de compra más rápida?</h4>
+                                            <ul>
+                                                <li>Descuentos exclusivos</li>
+                                                <li>Crear listas de deseos</li>
+                                            </ul>
+                                            <Link
+                                                href="/registro"
+                                                className="efe-btn-register-mega"
+                                                onClick={() => setIsUserMenuOpen(false)}
+                                            >
+                                                Crea tu cuenta
+                                            </Link>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div
-                                className={`efe-user-dropdown ${isUserMenuOpen ? 'is-open' : ''}`}
-                                onFocus={() => setIsUserMenuOpen(true)}
-                                onBlur={handleUserBlur}
-                                onKeyDown={handleUserKeyDown}
-                            >
-                                <button type="button" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="efe-header-action-link efe-header-action-btn">
+                            )}
+
+                            {!minimal && (
+                                <button
+                                    type="button"
+                                    onClick={onOpenCart}
+                                    className="efe-header-action-link efe-header-action-btn efe-cart-btn-anim"
+                                >
                                     <div className="efe-header-action-icon">
-                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                                            <circle cx="12" cy="7" r="4" />
+                                        <svg
+                                            width="26"
+                                            height="26"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="white"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <circle cx="9" cy="21" r="2" />
+                                            <circle cx="20" cy="21" r="2" />
+                                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                                         </svg>
+                                        <span className="efe-cart-badge-new">{cartCount}</span>
                                     </div>
-                                    <span className="efe-header-icon-text">Cuenta</span>
+                                    <span className="efe-header-icon-text">Carrito</span>
                                 </button>
-                                <div className="efe-dropdown-menu efe-dropdown-mega" role="menu">
-                                    <div className="efe-dropdown-mega-left">
-                                        <h4>Bienvenido</h4>
-                                        <p>Inicia sesión y podrás consultar el estado de tus pedidos, tu libreta de direcciones y todo lo que necesites.</p>
-                                        <button type="button" onClick={() => { setIsLoginOpen(true); setIsUserMenuOpen(false); }} className="efe-btn-login-mega">Iniciar sesión</button>
-                                    </div>
-                                    <div className="efe-dropdown-mega-right">
-                                        <h4>¿Quieres una experiencia de compra más rápida?</h4>
-                                        <ul>
-                                            <li>Descuentos exclusivos</li>
-                                            <li>Crear listas de deseos</li>
-                                        </ul>
-                                        <Link href="/registro" className="efe-btn-register-mega" onClick={() => setIsUserMenuOpen(false)}>Crea tu cuenta</Link>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        
-                        {!minimal && (
-                            <button type="button" onClick={onOpenCart} className="efe-header-action-link efe-header-action-btn efe-cart-btn-anim">
-                                <div className="efe-header-action-icon">
-                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="9" cy="21" r="2" /><circle cx="20" cy="21" r="2" />
-                                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                                    </svg>
-                                    <span className="efe-cart-badge-new">
-                                        {cartCount}
-                                    </span>
-                                </div>
-                                <span className="efe-header-icon-text">Carrito</span>
-                            </button>
-                        )}
-                    </div>
+                            )}
+                        </div>
                     )}
 
-                    {/* Carrito móvil */}
                     {!minimal && (
                         <button className="efe-header-cart efe-mobile-only" onClick={onOpenCart}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+                            <svg
+                                width="24"
+                                height="24"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="9" cy="21" r="1" />
+                                <circle cx="20" cy="21" r="1" />
                                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                             </svg>
                             {cartCount > 0 && <span className="efe-cart-badge">{cartCount}</span>}
@@ -437,7 +739,7 @@ export default function Header({ cartCount = 0, onOpenCart, onOpenCategories, lo
                     )}
                 </div>
             </div>
-            
+
             <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
         </header>
     );

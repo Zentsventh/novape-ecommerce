@@ -4,7 +4,9 @@ import LoginModal from './LoginModal';
 import { DEFAULT_IMAGE } from './constants';
 
 const formatPrice = (price) =>
-    new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
+    new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+        price
+    );
 
 export default function CartDrawer({ cart, isOpen, onClose }) {
     const { auth, flash } = usePage().props;
@@ -18,7 +20,11 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
     const handleUpdate = (productoId, currentQty, amount) => {
         const newQty = currentQty + amount;
         if (newQty < 1 || newQty > 5) return;
-        router.post('/cart/update', { producto_id: productoId, cantidad: newQty }, { preserveScroll: true });
+        router.post(
+            '/cart/update',
+            { producto_id: productoId, cantidad: newQty },
+            { preserveScroll: true }
+        );
     };
 
     const handleRemove = (productoId) => {
@@ -32,7 +38,15 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                 <div className="efe-cart-header">
                     <h2>
                         <button className="efe-cart-close" onClick={onClose}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <svg
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                            >
                                 <line x1="18" y1="6" x2="6" y2="18" />
                                 <line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
@@ -40,23 +54,43 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                         Carrito
                     </h2>
                     {cart?.items?.length > 0 && (
-                        <button className="efe-cart-clear-btn" onClick={() => router.post('/cart/clear')}>
+                        <button
+                            className="efe-cart-clear-btn"
+                            onClick={() => router.post('/cart/clear')}
+                        >
                             Limpiar carrito
                         </button>
                     )}
                 </div>
 
                 {flash?.error && (
-                    <div style={{ margin: '10px 20px', padding: '10px', backgroundColor: '#fef2f2', border: '1px solid #f87171', color: '#dc2626', borderRadius: '4px', fontSize: '14px' }}>
+                    <div
+                        style={{
+                            margin: '10px 20px',
+                            padding: '10px',
+                            backgroundColor: '#fef2f2',
+                            border: '1px solid #f87171',
+                            color: '#dc2626',
+                            borderRadius: '4px',
+                            fontSize: '14px',
+                        }}
+                    >
                         {flash.error}
                     </div>
                 )}
 
-
                 <div className="efe-cart-body">
                     {!cart?.items?.length ? (
                         <div className="efe-cart-empty">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                            <svg
+                                width="64"
+                                height="64"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                            >
                                 <circle cx="9" cy="21" r="1" />
                                 <circle cx="20" cy="21" r="1" />
                                 <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
@@ -70,23 +104,57 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                                 <div key={item.id} className="efe-cart-item">
                                     <div className="efe-cart-item-header">
                                         <div className="efe-cart-item-img">
-                                            <img src={item.imagen || DEFAULT_IMAGE} alt={item.nombre} />
+                                            <img
+                                                src={item.imagen || DEFAULT_IMAGE}
+                                                alt={item.nombre}
+                                            />
                                         </div>
                                         <div className="efe-cart-item-info">
-                                            <span className="efe-cart-item-brand">{item.marca || 'GENÉRICO'}</span>
+                                            <span className="efe-cart-item-brand">
+                                                {item.marca || 'GENÉRICO'}
+                                            </span>
                                             <h4 className="efe-cart-item-title">{item.nombre}</h4>
                                             <div className="efe-cart-item-price-row">
-                                                <span className="efe-cart-item-price-current">S/ {formatPrice(item.precio)}</span>
+                                                <span className="efe-cart-item-price-current">
+                                                    S/ {formatPrice(item.precio)}
+                                                </span>
                                             </div>
-                                            
+
                                             <div className="efe-cart-qty-ctrl">
-                                                <button className="efe-cart-qty-btn" onClick={() => handleUpdate(item.id, item.cantidad, -1)}>-</button>
-                                                <span className="efe-cart-qty-val">{item.cantidad}</span>
-                                                <button className="efe-cart-qty-btn" onClick={() => handleUpdate(item.id, item.cantidad, 1)}>+</button>
+                                                <button
+                                                    className="efe-cart-qty-btn"
+                                                    onClick={() =>
+                                                        handleUpdate(item.id, item.cantidad, -1)
+                                                    }
+                                                >
+                                                    -
+                                                </button>
+                                                <span className="efe-cart-qty-val">
+                                                    {item.cantidad}
+                                                </span>
+                                                <button
+                                                    className="efe-cart-qty-btn"
+                                                    onClick={() =>
+                                                        handleUpdate(item.id, item.cantidad, 1)
+                                                    }
+                                                >
+                                                    +
+                                                </button>
                                             </div>
                                         </div>
-                                        <button className="efe-cart-remove-btn" onClick={() => handleRemove(item.id)}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                        <button
+                                            className="efe-cart-remove-btn"
+                                            onClick={() => handleRemove(item.id)}
+                                        >
+                                            <svg
+                                                width="16"
+                                                height="16"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                            >
                                                 <polyline points="3 6 5 6 21 6" />
                                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                                             </svg>
@@ -109,29 +177,50 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                             <span className="efe-cart-savings-val">S/ 0.00</span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                            <button className="efe-cart-continue-btn" onClick={onClose} style={{
-                                flex: 1,
-                                padding: '12px',
-                                background: '#f3f4f6',
-                                color: '#374151',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '6px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                transition: 'all 0.2s ease',
-                                textAlign: 'center'
-                            }} onMouseOver={(e) => { e.currentTarget.style.background = '#e5e7eb'; }} onMouseOut={(e) => { e.currentTarget.style.background = '#f3f4f6'; }}>
+                            <button
+                                className="efe-cart-continue-btn"
+                                onClick={onClose}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px',
+                                    background: '#f3f4f6',
+                                    color: '#374151',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '6px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    fontSize: '14px',
+                                    transition: 'all 0.2s ease',
+                                    textAlign: 'center',
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = '#e5e7eb';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = '#f3f4f6';
+                                }}
+                            >
                                 Seguir comprando
                             </button>
-                            <button className="efe-cart-checkout-btn" style={{ flex: 1, margin: 0, padding: '12px', borderRadius: '6px', fontSize: '14px', fontWeight: '600' }} onClick={() => { 
-                                if (!auth.user) {
-                                    setIsLoginOpen(true);
-                                } else {
-                                    onClose(); 
-                                    router.get('/checkout'); 
-                                }
-                            }}>
+                            <button
+                                className="efe-cart-checkout-btn"
+                                style={{
+                                    flex: 1,
+                                    margin: 0,
+                                    padding: '12px',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                }}
+                                onClick={() => {
+                                    if (!auth.user) {
+                                        setIsLoginOpen(true);
+                                    } else {
+                                        onClose();
+                                        router.get('/checkout');
+                                    }
+                                }}
+                            >
                                 Ir a Pagar
                             </button>
                         </div>
@@ -139,8 +228,8 @@ export default function CartDrawer({ cart, isOpen, onClose }) {
                 )}
             </div>
 
-            <LoginModal 
-                isOpen={isLoginOpen} 
+            <LoginModal
+                isOpen={isLoginOpen}
                 onClose={() => setIsLoginOpen(false)}
                 onSuccessCallback={() => {
                     setIsLoginOpen(false);
