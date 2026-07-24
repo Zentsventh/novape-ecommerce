@@ -30,7 +30,7 @@ class Producto extends Model
                 $baseSlug = \Illuminate\Support\Str::slug($producto->nombre);
                 $slug = $baseSlug;
                 $count = 1;
-                while (static::where('slug', $slug)->where('id', '!=', $producto->id)->exists()) {
+                while (static::withTrashed()->where('slug', $slug)->where('id', '!=', $producto->id)->exists()) {
                     $slug = $baseSlug . '-' . $count;
                     $count++;
                 }
