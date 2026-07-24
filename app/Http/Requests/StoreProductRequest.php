@@ -35,7 +35,7 @@ class StoreProductRequest extends FormRequest
             // Can be string (URL) or uploaded file
             'imagenes.*' => 'nullable',
             'stock' => 'required|integer|min:0',
-            'especificaciones' => 'present|array',
+            'especificaciones' => 'nullable|array',
             'especificaciones.*.nombre' => 'required|string',
             'especificaciones.*.valor' => 'required|string',
         ];

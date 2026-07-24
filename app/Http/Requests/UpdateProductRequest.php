@@ -34,7 +34,7 @@ class UpdateProductRequest extends FormRequest
             'imagenes' => 'array',
             'imagenes.*' => 'nullable',
             'stock' => 'required|integer|min:0',
-            'especificaciones' => 'present|array',
+            'especificaciones' => 'nullable|array',
             'especificaciones.*.nombre' => 'required|string',
             'especificaciones.*.valor' => 'required|string',
         ];

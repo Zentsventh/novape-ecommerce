@@ -70,7 +70,10 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!await confirmDialog(isEditing ? '¿Estás seguro de que quieres actualizar este producto?' : '¿Estás seguro de que quieres crear este producto?')) {
+        if (!await confirmDialog(
+            isEditing ? '¿Estás seguro de que quieres actualizar este producto?' : '¿Estás seguro de que quieres crear este producto?',
+            { confirmText: isEditing ? 'Actualizar Producto' : 'Crear Producto' }
+        )) {
             return;
         }
 

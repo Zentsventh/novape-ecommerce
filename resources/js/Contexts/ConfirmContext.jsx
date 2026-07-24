@@ -6,7 +6,8 @@ export function ConfirmProvider({ children }) {
     const [confirmState, setConfirmState] = useState({
         isOpen: false,
         message: '',
-        title: 'Confirmación'
+        title: 'Confirmación',
+        confirmText: 'Confirmar'
     });
     
     // Almacenamos la promesa resolve para poder llamarla al confirmar o cancelar
@@ -16,7 +17,8 @@ export function ConfirmProvider({ children }) {
         setConfirmState({
             isOpen: true,
             message,
-            title: options.title || 'Confirmar acción'
+            title: options.title || 'Confirmar acción',
+            confirmText: options.confirmText || 'Confirmar'
         });
         
         return new Promise((resolve) => {
@@ -60,9 +62,9 @@ export function ConfirmProvider({ children }) {
                             </button>
                             <button 
                                 onClick={handleConfirm}
-                                style={{ background: '#2c3e50', border: 'none', borderRadius: '24px', padding: '10px 25px', fontSize: '14px', fontWeight: '600', color: 'white', cursor: 'pointer' }}
+                                style={{ background: confirmState.confirmText === 'Eliminar' ? '#e11d48' : '#2c3e50', border: 'none', borderRadius: '24px', padding: '10px 25px', fontSize: '14px', fontWeight: '600', color: 'white', cursor: 'pointer' }}
                             >
-                                Eliminar
+                                {confirmState.confirmText}
                             </button>
                         </div>
                     </div>
