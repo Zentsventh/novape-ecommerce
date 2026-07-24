@@ -137,6 +137,12 @@ export default function AdminLayout({ children, logoUrl }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
+        if (isMobile || isTablet) {
+            setSidebarOpen(false);
+        }
+    }, [url]);
+
+    useEffect(() => {
         fetchNotificaciones();
         const interval = setInterval(fetchNotificaciones, 15000);
         return () => clearInterval(interval);
@@ -179,11 +185,6 @@ export default function AdminLayout({ children, logoUrl }) {
                                 href={item.href}
                                 className={`admin-nav-link ${isActive(item) ? 'active' : ''}`}
                                 title={item.label}
-                                onClick={() => {
-                                    if (isMobile || isTablet) {
-                                        setTimeout(() => setSidebarOpen(false), 150);
-                                    }
-                                }}
                             >
                                 {item.icon}
                                 <span className="admin-nav-label">{item.label}</span>
