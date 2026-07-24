@@ -84,7 +84,7 @@ Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/registro', [AuthController::class, 'showRegister'])->name('registro');
 Route::post('/registro', [AuthController::class, 'register']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::any('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Validación DNI/RUC
 // (Movido a routes/api.php)
@@ -179,7 +179,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 
 Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login')->middleware('guest:admin');
 Route::post('/admin/login', [AdminAuthController::class, 'login'])->middleware('guest:admin');
-Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout')->middleware('auth:admin');
+Route::any('/admin/logout', [AdminAuthController::class, 'logout'])->name('admin.logout')->middleware('auth:admin');
 
 Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
     Route::get('/', [DashboardController::class, 'dashboard'])->name('admin.dashboard')->middleware('permiso:ver_dashboard');

@@ -26,7 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '/checkout/niubiz/callback',
             '/api/checkout/niubiz/session',
             '/api/documento/consultar',
-            '/webhook/stripe'
+            '/webhook/stripe',
+            '/logout',
+            '/admin/logout'
         ]);
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
