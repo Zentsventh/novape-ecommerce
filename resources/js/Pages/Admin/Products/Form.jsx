@@ -364,7 +364,13 @@ export default function Form({ producto, marcas, categorias, proveedores, listaE
                                     <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: 'var(--admin-text-muted)' }}>1. Categoría Principal</label>
                                     <select 
                                         value={selectedMainCategory} 
-                                        onChange={(e) => setSelectedMainCategory(e.target.value)} 
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            setSelectedMainCategory(val);
+                                            if (val && !data.categorias.includes(parseInt(val))) {
+                                                setData('categorias', [...data.categorias, parseInt(val)]);
+                                            }
+                                        }} 
                                         style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--admin-border)', background: 'transparent' }}
                                     >
                                         <option value="">-- Seleccionar --</option>

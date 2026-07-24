@@ -145,7 +145,19 @@ export default function Index({ productos, categorias, marcas, filters }) {
                                     <td style={{ padding: '12px', color: 'var(--admin-text-muted)' }}>{producto.sku_base}</td>
                                     <td style={{ padding: '12px', color: 'var(--admin-text-muted)' }}>
                                         {producto.categorias && producto.categorias.length > 0 
-                                            ? <span style={{ background: '#EBF8FF', color: '#0082B8', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>{producto.categorias[0].nombre}</span>
+                                            ? (
+                                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                                    {producto.categorias
+                                                        .sort((a, b) => (a.categoria_padre_id === null ? -1 : (b.categoria_padre_id === null ? 1 : 0)))
+                                                        .slice(0, 2)
+                                                        .map((c, i) => (
+                                                            <span key={i} style={{ background: c.categoria_padre_id === null ? '#EBF8FF' : '#f3f4f6', color: c.categoria_padre_id === null ? '#0082B8' : '#4b5563', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: c.categoria_padre_id === null ? 'bold' : 'normal' }}>
+                                                                {c.nombre}
+                                                            </span>
+                                                        ))
+                                                    }
+                                                </div>
+                                            )
                                             : '-'
                                         }
                                     </td>
