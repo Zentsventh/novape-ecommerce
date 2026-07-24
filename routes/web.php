@@ -281,8 +281,8 @@ Route::prefix('admin')->middleware(['auth:admin'])->group(function () {
         
         Route::get('/ajustes/permisos', [SettingController::class, 'rolesIndex'])->name('admin.roles.index');
         Route::post('/ajustes/permisos/sync', [SettingController::class, 'rolesSyncPermisos'])->name('admin.roles.sync');
-        Route::post('/ajustes/roles', [SettingController::class, 'storeRole'])->name('admin.roles.store');
-        Route::delete('/ajustes/roles/{id}', [SettingController::class, 'destroyRole'])->name('admin.roles.destroy');
+        Route::post('/ajustes/roles', [SettingController::class, 'storeRole'])->name('admin.ajustes.roles.store');
+        Route::delete('/ajustes/roles/{id}', [SettingController::class, 'destroyRole'])->name('admin.ajustes.roles.destroy');
     });
 
     // Cupones (Eliminado)
