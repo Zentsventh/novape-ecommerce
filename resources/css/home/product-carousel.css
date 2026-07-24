@@ -133,12 +133,8 @@
     }
 }
 
-/* En dispositivos touch, ocultar flechas (el usuario hace swipe) */
+/* En dispositivos touch, mostrar indicadores más grandes para fácil tap */
 @media (pointer: coarse) {
-    .efe-carousel-arrow {
-        display: none;
-    }
-
     .efe-carousel-dot {
         width: 10px;
         height: 10px;

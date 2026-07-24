@@ -45,8 +45,42 @@ export default function ProductCarousel({ products }) {
 
     const translateX = currentPage * (contentWidth + gap);
 
+    const [touchStart, setTouchStart] = useState(0);
+    const [touchEnd, setTouchEnd] = useState(0);
+
+    const handleTouchStart = (e) => {
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > 50;
+        const isRightSwipe = distance < -50;
+        
+        if (isLeftSwipe && currentPage < totalPages - 1) {
+            goToPage(currentPage + 1);
+        }
+        if (isRightSwipe && currentPage > 0) {
+            goToPage(currentPage - 1);
+        }
+        
+        setTouchStart(0);
+        setTouchEnd(0);
+    };
+
     return (
-        <div className="efe-section-carousel" ref={containerRef}>
+        <div 
+            className="efe-section-carousel" 
+            ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
             <div
                 className="efe-carousel-track"
                 style={{
