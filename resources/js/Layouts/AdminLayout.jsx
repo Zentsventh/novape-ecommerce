@@ -6,6 +6,7 @@ import {
     UserCog, Shield, Star, Settings, LogOut, Menu, X, Bell, Eye
 } from 'lucide-react';
 import { useDeviceContext } from '@/Contexts/DeviceContext';
+import JarvisHUD from '@/Components/JarvisHUD';
 import '../../css/admin/admin.css';
 
 const LOGO_FALLBACK = '/images/logo.png';
@@ -340,6 +341,8 @@ export default function AdminLayout({ children, logoUrl }) {
                     )}
                     {children}
                 </div>
+                
+                <JarvisHUD />
             </main>
         </div>
     );

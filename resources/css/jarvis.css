@@ -1,0 +1,385 @@
+/* Jarvis HUD (Admin) */
+.jarvis-orb {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 64px;
+    height: 64px;
+    cursor: pointer;
+    z-index: 9999;
+}
+
+.jarvis-orb .pulse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 12px 8px rgba(0, 255, 255, 0.4);
+    transition: opacity 0.3s;
+    animation: orb-pulse 3s infinite;
+}
+
+.jarvis-orb .pulse.active {
+    animation: orb-pulse-active 1.5s infinite;
+    background: rgba(0, 255, 255, 0.4);
+}
+
+.jarvis-orb .pulse.listening {
+    animation: orb-pulse-listen 0.5s infinite alternate;
+    background: rgba(255, 0, 255, 0.4);
+    box-shadow: 0 0 12px 8px rgba(255, 0, 255, 0.6);
+}
+
+.jarvis-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    animation: spin 10s linear infinite;
+}
+
+@keyframes orb-pulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    50% { transform: scale(1.1); opacity: 0.5; }
+    100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+@keyframes orb-pulse-active {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+
+@keyframes orb-pulse-listen {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0.8; }
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}
+
+.jarvis-hud-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 10, 20, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 9998;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+}
+
+.jarvis-hud-content {
+    background: rgba(0, 20, 40, 0.7);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 32px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.1);
+    position: relative;
+    text-align: center;
+}
+
+.jarvis-hud-content h3 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.jarvis-hud-content .close-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #0ff;
+    font-size: 24px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+
+.jarvis-hud-content .close-btn:hover {
+    opacity: 1;
+}
+
+/* Jarvis Chat Drawer (Public) */
+.jarvis-chat-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    transition: transform 0.3s;
+}
+
+.jarvis-chat-toggle:hover {
+    transform: scale(1.1);
+}
+
+.jarvis-chat-toggle.hidden {
+    display: none;
+}
+
+.jarvis-drawer {
+    position: fixed;
+    bottom: 0;
+    right: 24px;
+    width: 350px;
+    height: 600px;
+    max-height: 85vh;
+    background: #111827;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -5px 25px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    z-index: 10000;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-bottom: none;
+}
+
+.jarvis-drawer.open {
+    transform: translateY(0);
+}
+
+.jarvis-header {
+    padding: 16px;
+    background: rgba(0, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 16px 16px 0 0;
+}
+
+.jarvis-header .title {
+    color: #0ff;
+    font-weight: 600;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jarvis-header .orb-small {
+    width: 10px;
+    height: 10px;
+    background: #0ff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px #0ff;
+    animation: orb-pulse-active 2s infinite;
+}
+
+.jarvis-header .close-btn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.jarvis-header .close-btn:hover {
+    color: #fff;
+}
+
+.jarvis-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.message-row {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+}
+
+.message-row.user {
+    align-self: flex-end;
+}
+
+.message-row.jarvis {
+    align-self: flex-start;
+}
+
+.bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.message-row.user .bubble {
+    background: #374151;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.message-row.jarvis .bubble {
+    background: rgba(0, 255, 255, 0.1);
+    color: #e5e7eb;
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    border-bottom-left-radius: 4px;
+}
+
+.ui-cards-container {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    margin-top: 8px;
+    padding-bottom: 8px;
+}
+
+.ui-card {
+    min-width: 140px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.ui-card img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.ui-card h4 {
+    font-size: 0.85rem;
+    color: #fff;
+    margin: 0 0 4px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ui-card .price {
+    color: #0ff;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+}
+
+.ui-card .ui-btn {
+    display: block;
+    text-align: center;
+    background: rgba(0, 255, 255, 0.15);
+    color: #0ff;
+    text-decoration: none;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+.ui-card .ui-btn:hover {
+    background: rgba(0, 255, 255, 0.3);
+}
+
+.jarvis-input-area {
+    padding: 16px;
+    background: #1f2937;
+    border-top: 1px solid #374151;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.jarvis-input-area input {
+    flex: 1;
+    background: #111827;
+    border: 1px solid #374151;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 20px;
+    outline: none;
+}
+
+.jarvis-input-area input:focus {
+    border-color: #0ff;
+}
+
+.jarvis-input-area .send-btn, 
+.jarvis-input-area .mic-btn {
+    background: #374151;
+    border: none;
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.jarvis-input-area .send-btn:hover:not(:disabled),
+.jarvis-input-area .mic-btn:hover {
+    background: #4b5563;
+}
+
+.jarvis-input-area .send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.jarvis-input-area .mic-btn.active {
+    background: #ef4444;
+    animation: pulse-mic 1s infinite;
+}
+
+@keyframes pulse-mic {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.listening-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 16px !important;
+}
+
+.listening-indicator .dot {
+    width: 6px;
+    height: 6px;
+    background: #0ff;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.listening-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
+.listening-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}

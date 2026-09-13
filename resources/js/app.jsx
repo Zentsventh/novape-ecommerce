@@ -1,7 +1,7 @@
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import ChatBot from './Components/Home/ChatBot';
+import JarvisChatDrawer from './Components/JarvisChatDrawer';
 import { ConfirmProvider } from '@/Contexts/ConfirmContext';
 import { DeviceProvider, useDeviceContext } from '@/Contexts/DeviceContext';
 import '../css/home/chatbot.css';
@@ -16,7 +16,7 @@ function GlobalLayout({ children, pageName = '', serverHints = {} }) {
         <DeviceProvider serverHints={serverHints}>
             <ConfirmProvider>
                 {children}
-                {!isAdmin && !isCheckoutFlow && <ChatBot />}
+                {!isAdmin && !isCheckoutFlow && <JarvisChatDrawer />}
             </ConfirmProvider>
         </DeviceProvider>
     );
