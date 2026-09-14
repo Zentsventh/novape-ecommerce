@@ -27,8 +27,35 @@ class JarvisPublicController extends Controller
 
         $response = ['voice' => '', 'ui' => null, 'action' => null];
 
+        // ── Navigation (Control 360) ─────────────────────────────
+        // ── Navigation (Control 360) ─────────────────────────────
+        $navRegex = '/(mandame|mándame|derivame|derívame|llevame|llévame|ir a|ir al|ver|abre|abrir|dirigeme|dirígeme|muestra)\s*(el|la|los|las)?\s*(.*)/i';
+        
+        if (preg_match($navRegex, $intent, $m)) {
+            $destino = $m[3] ?? '';
+            if (preg_match('/carrito|compras/i', $destino)) {
+                $response['voice']   = "Enseguida, te llevo a tu carrito de compras.";
+                $response['command'] = ['type' => 'redirect', 'url' => '/checkout'];
+                $response['action']  = 'nav_checkout';
+            }
+            elseif (preg_match('/catalogo|catálogo|producto/i', $destino)) {
+                $response['voice']   = "Claro, te muestro nuestro catálogo de productos.";
+                $response['command'] = ['type' => 'redirect', 'url' => '/catalogo'];
+                $response['action']  = 'nav_catalogo';
+            }
+            elseif (preg_match('/perfil|cuenta/i', $destino)) {
+                $response['voice']   = "Te redirijo a tu perfil de usuario.";
+                $response['command'] = ['type' => 'redirect', 'url' => '/profile'];
+                $response['action']  = 'nav_profile';
+            }
+            elseif (preg_match('/inicio|principal|home/i', $destino)) {
+                $response['voice']   = "Volviendo a la página principal.";
+                $response['command'] = ['type' => 'redirect', 'url' => '/'];
+                $response['action']  = 'nav_home';
+            }
+        }
         // ── Recommendations ──────────────────────────────────────
-        if (preg_match('/recomienda|sugerencia|sugiere|que me recomiendas|productos populares/', $intent)) {
+        elseif (preg_match('/recomienda|sugerencia|sugiere|que me recomiendas|productos populares/', $intent)) {
             $products = Producto::where('activo', true)
                 ->with(['variantes', 'imagenes'])
                 ->inRandomOrder()

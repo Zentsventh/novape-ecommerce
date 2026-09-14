@@ -1,4 +1,8 @@
-/* Jarvis HUD (Admin) */
+/* ============================================
+   Jarvis HUD (Admin Panel)
+   ============================================ */
+
+/* ─── Orb Base ─────────────────────────────── */
 .jarvis-orb {
     position: fixed;
     bottom: 24px;
@@ -7,6 +11,8 @@
     height: 64px;
     cursor: pointer;
     z-index: 9999;
+    border-radius: 50%;
+    transition: all 0.3s ease;
 }
 
 .jarvis-orb .pulse {
@@ -18,21 +24,63 @@
     border-radius: 50%;
     background: rgba(0, 255, 255, 0.2);
     box-shadow: 0 0 12px 8px rgba(0, 255, 255, 0.4);
-    transition: opacity 0.3s;
+    transition: all 0.3s ease;
     animation: orb-pulse 3s infinite;
 }
 
-.jarvis-orb .pulse.active {
-    animation: orb-pulse-active 1.5s infinite;
-    background: rgba(0, 255, 255, 0.4);
+/* ─── Active State (Verde Esmeralda) ──────── */
+.jarvis-orb.active {
+    background: rgba(16, 185, 129, 0.15);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.6);
 }
 
+.jarvis-orb.active .pulse {
+    background: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 16px 10px rgba(16, 185, 129, 0.5);
+    animation: orb-pulse-emerald 2s infinite;
+}
+
+/* ─── Continuous Mode (Intense Emerald Glow) ─ */
+.jarvis-orb.continuous-mode {
+    background: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+}
+
+.jarvis-orb.continuous-mode .pulse {
+    background: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 20px 12px rgba(16, 185, 129, 0.7);
+    animation: orb-pulse-continuous 1.5s infinite;
+}
+
+/* ─── Listening State (Magenta pulse) ──────── */
 .jarvis-orb .pulse.listening {
-    animation: orb-pulse-listen 0.5s infinite alternate;
-    background: rgba(255, 0, 255, 0.4);
-    box-shadow: 0 0 12px 8px rgba(255, 0, 255, 0.6);
+    animation: orb-pulse-listen 0.6s infinite alternate;
+    background: rgba(168, 85, 247, 0.4);
+    box-shadow: 0 0 16px 10px rgba(168, 85, 247, 0.6);
 }
 
+/* Override listening in continuous mode (green-purple blend) */
+.jarvis-orb.continuous-mode .pulse.listening {
+    background: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 20px 12px rgba(16, 185, 129, 0.8);
+    animation: orb-pulse-listen-continuous 0.6s infinite alternate;
+}
+
+/* ─── Processing Indicator ─────────────────── */
+.processing-dot {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 14px;
+    height: 14px;
+    background: #f59e0b;
+    border-radius: 50%;
+    border: 2px solid #111827;
+    animation: processing-blink 0.8s infinite;
+    z-index: 10000;
+}
+
+/* ─── SVG Ring ─────────────────────────────── */
 .jarvis-svg {
     position: absolute;
     top: 0;
@@ -42,26 +90,349 @@
     animation: spin 10s linear infinite;
 }
 
+/* ─── Status Label ─────────────────────────── */
+.jarvis-status-label {
+    position: fixed;
+    bottom: 96px;
+    right: 12px;
+    background: rgba(17, 24, 39, 0.95);
+    color: #9ca3af;
+    border: 1px solid rgba(75, 85, 99, 0.4);
+    border-radius: 8px;
+    padding: 4px 12px;
+    z-index: 9999;
+    font-size: 0.75rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.jarvis-status-label.status-listening {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.jarvis-status-label.status-processing {
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.jarvis-status-label.status-speaking {
+    color: #8b5cf6;
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.3);
+}
+
+/* ─── Status Orb Colors ────────────────────── */
+.jarvis-orb.status-listening .pulse {
+    background: rgba(16, 185, 129, 0.4);
+    box-shadow: 0 0 18px 10px rgba(16, 185, 129, 0.6);
+    animation: orb-pulse-emerald 1.5s infinite;
+}
+
+.jarvis-orb.status-processing .pulse {
+    background: rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 18px 10px rgba(245, 158, 11, 0.5);
+    animation: orb-pulse-emerald 0.8s infinite;
+}
+
+.jarvis-orb.status-speaking .pulse {
+    background: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 0 18px 10px rgba(139, 92, 246, 0.5);
+    animation: orb-pulse-listen 0.6s infinite alternate;
+}
+
+/* ─── Toast Notification ───────────────────── */
+.jarvis-toast {
+    position: fixed;
+    bottom: 140px;
+    right: 24px;
+    background: rgba(17, 24, 39, 0.95);
+    color: #0ff;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    z-index: 10001;
+    animation: toast-in 0.3s ease-out;
+    max-width: 280px;
+}
+
+/* ─── Commander Panel ──────────────────────── */
+.jarvis-commander-panel {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    width: 380px;
+    height: 500px;
+    max-height: 80vh;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    z-index: 9998;
+    transform: translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.jarvis-commander-panel.expanded {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ─── Commander Header ─────────────────────── */
+.commander-header {
+    padding: 12px 16px;
+    border-bottom: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    cursor: pointer;
+    background: transparent;
+}
+
+.commander-title {
+    display: none; /* Hide title to make it look like just floating bubbles */
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #9ca3af;
+    transition: all 0.3s ease;
+}
+.status-dot.status-listening { background: #10b981; box-shadow: 0 0 5px #10b981; }
+.status-dot.status-processing { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
+.status-dot.status-speaking { background: #8b5cf6; box-shadow: 0 0 5px #8b5cf6; }
+
+.commander-header .close-btn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+/* ─── Commander History (Chat) ─────────────── */
+.commander-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.empty-state {
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.85rem;
+    margin-top: 50%;
+    font-style: italic;
+}
+
+.chat-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.chat-bubble.user {
+    align-self: flex-end;
+    background: rgba(16, 185, 129, 0.2);
+    color: #e5e7eb;
+    border-bottom-right-radius: 2px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.chat-bubble.assistant {
+    align-self: flex-start;
+    background: rgba(31, 41, 55, 0.8);
+    color: #d1d5db;
+    border-bottom-left-radius: 2px;
+    border: 1px solid rgba(75, 85, 99, 0.4);
+}
+
+.chat-bubble.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.chat-bubble.interim {
+    opacity: 0.7;
+    border-style: dashed;
+}
+
+.cursor-blink {
+    animation: blink 1s step-end infinite;
+}
+
+/* ─── Commander Input Area ─────────────────── */
+.commander-input-area {
+    padding: 12px;
+    border-top: none;
+    display: flex;
+    gap: 8px;
+    background: transparent;
+}
+
+.commander-input-area input {
+    flex: 1;
+    background: rgba(31, 41, 55, 0.8);
+    border: 1px solid rgba(75, 85, 99, 0.5);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: #e5e7eb;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.commander-input-area input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.commander-input-area button {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.commander-input-area button:disabled {
+    background: #4b5563;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.commander-input-area button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ─── Processing Dots ──────────────────────── */
+.chat-bubble.processing .dot {
+    animation: dot-blink 1.4s infinite both;
+    font-weight: bold;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+.chat-bubble.processing .dot:nth-child(2) { animation-delay: 0.2s; }
+.chat-bubble.processing .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dot-blink {
+    0% { opacity: 0.2; }
+    20% { opacity: 1; }
+    100% { opacity: 0.2; }
+}
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* ─── UI Cards inside Chat ─────────────────── */
+.chat-card {
+    margin-top: 8px;
+    padding: 10px;
+    background: rgba(17, 24, 39, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+.chat-card h4 { margin: 0 0 4px 0; font-size: 0.8rem; color: #9ca3af; }
+.chat-card .card-val { font-size: 1.4rem; font-weight: 700; }
+.chat-card .card-sub { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
+
+.chat-table-wrapper {
+    margin-top: 8px;
+    overflow-x: auto;
+    background: rgba(17, 24, 39, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(75, 85, 99, 0.3);
+}
+.chat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+.chat-table th {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
+    color: #9ca3af;
+}
+.chat-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(75, 85, 99, 0.2);
+}
+.chat-table tr:last-child td { border-bottom: none; }
+
+/* ─── Keyframes ────────────────────────────── */
 @keyframes orb-pulse {
-    0% { transform: scale(0.9); opacity: 0.8; }
-    50% { transform: scale(1.1); opacity: 0.5; }
+    0%   { transform: scale(0.9); opacity: 0.8; }
+    50%  { transform: scale(1.1); opacity: 0.5; }
     100% { transform: scale(0.9); opacity: 0.8; }
 }
 
-@keyframes orb-pulse-active {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(1.5); opacity: 0; }
+@keyframes orb-pulse-emerald {
+    0%   { transform: scale(0.95); opacity: 0.9; }
+    50%  { transform: scale(1.08); opacity: 0.6; }
+    100% { transform: scale(0.95); opacity: 0.9; }
+}
+
+@keyframes orb-pulse-continuous {
+    0%   { transform: scale(1); opacity: 1; box-shadow: 0 0 20px 12px rgba(16, 185, 129, 0.7); }
+    50%  { transform: scale(1.15); opacity: 0.7; box-shadow: 0 0 30px 16px rgba(16, 185, 129, 0.4); }
+    100% { transform: scale(1); opacity: 1; box-shadow: 0 0 20px 12px rgba(16, 185, 129, 0.7); }
 }
 
 @keyframes orb-pulse-listen {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(1.2); opacity: 0.8; }
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.15); opacity: 0.7; }
+}
+
+@keyframes orb-pulse-listen-continuous {
+    0%   { transform: scale(1); opacity: 1; box-shadow: 0 0 20px 12px rgba(16, 185, 129, 0.8); }
+    100% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 25px 14px rgba(16, 185, 129, 0.5); }
 }
 
 @keyframes spin {
     100% { transform: rotate(360deg); }
 }
 
+@keyframes processing-blink {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+}
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── HUD Overlay (Response Cards) ─────────── */
 .jarvis-hud-overlay {
     position: fixed;
     top: 0;
@@ -114,7 +485,11 @@
     opacity: 1;
 }
 
-/* Jarvis Chat Drawer (Public) */
+
+/* ============================================
+   Jarvis Chat Drawer (Public / Tienda)
+   ============================================ */
+
 .jarvis-chat-toggle {
     position: fixed;
     bottom: 24px;
@@ -188,7 +563,7 @@
     background: #0ff;
     border-radius: 50%;
     box-shadow: 0 0 8px #0ff;
-    animation: orb-pulse-active 2s infinite;
+    animation: orb-pulse-emerald 2s infinite;
 }
 
 .jarvis-header .close-btn {
@@ -326,7 +701,7 @@
     border-color: #0ff;
 }
 
-.jarvis-input-area .send-btn, 
+.jarvis-input-area .send-btn,
 .jarvis-input-area .mic-btn {
     background: #374151;
     border: none;
@@ -357,8 +732,8 @@
 }
 
 @keyframes pulse-mic {
-    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70%  { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
@@ -381,5 +756,5 @@
 
 @keyframes bounce {
     0%, 80%, 100% { transform: scale(0); }
-    40% { transform: scale(1); }
+    40%           { transform: scale(1); }
 }

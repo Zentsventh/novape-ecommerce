@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import jarvisVoice from '../lib/jarvisVoice';
 import axios from 'axios';
+import { router } from '@inertiajs/react';
 import '../../css/jarvis.css';
 
 export default function JarvisChatDrawer({ mode = 'public' }) {
@@ -31,6 +32,10 @@ export default function JarvisChatDrawer({ mode = 'public' }) {
       const res = await axios.post(endpoint, { message: text });
       
       setHistory(prev => [...prev, { from: 'jarvis', text: res.data.voice, ui: res.data.ui }]);
+
+      if (res.data.command && res.data.command.type === 'redirect') {
+          router.visit(res.data.command.url);
+      }
       
       jarvisVoice.speak(res.data.voice, () => {
          if (continuousMode) {
