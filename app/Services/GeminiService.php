@@ -151,6 +151,7 @@ class GeminiService
                 ];
             }
 
+            // Single attempt — no blocking sleep to avoid max_execution_time fatal errors
             $response = Http::timeout($timeout)
                 ->withoutVerifying()
                 ->withHeaders(['Content-Type' => 'application/json'])
@@ -158,6 +159,14 @@ class GeminiService
 
             if ($response->successful()) {
                 return $response->json('candidates.0.content');
+            }
+
+            // Handle quota exceeded — log clearly so the user knows
+            if ($response->status() == 429) {
+                Log::warning('GeminiService::chatWithTools — Gemini API quota exceeded (429). Free tier limit reached.', [
+                    'hint' => 'Wait 60 seconds or upgrade your Gemini API plan.',
+                ]);
+                return null;
             }
 
             Log::error('GeminiService::chatWithTools failed', [

@@ -32,7 +32,7 @@ class ElevenLabsService
                 'xi-api-key' => $this->apiKey,
                 'Content-Type' => 'application/json',
                 'Accept' => 'audio/mpeg'
-            ])->timeout(15)->post("https://api.elevenlabs.io/v1/text-to-speech/{$this->voiceId}?optimize_streaming_latency=2", [
+            ])->withoutVerifying()->timeout(15)->post("https://api.elevenlabs.io/v1/text-to-speech/{$this->voiceId}?optimize_streaming_latency=2", [
                 'text' => $text,
                 'model_id' => 'eleven_multilingual_v2',
                 'voice_settings' => [

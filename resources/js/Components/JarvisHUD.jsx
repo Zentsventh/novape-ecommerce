@@ -34,7 +34,7 @@ export default function JarvisHUD() {
             setStatus('listening');
           }
         },
-        // onFinal — Llamar a la API agéntica (Gemini)
+        // onFinal — Llamar a la API local NLU (sin Gemini)
         async (text) => {
           if (!mountedRef.current) return;
 
@@ -42,26 +42,51 @@ export default function JarvisHUD() {
           
           // Marcar como procesando
           setStatus('processing');
-          console.log('[JarvisHUD] Enviando mensaje a Gemini:', cleanText);
+          console.log('[JarvisHUD] Enviando mensaje al motor NLU local:', cleanText);
 
           try {
-              // Llamada al Santo Grial
               const res = await axios.post('/api/jarvis/admin/message', { message: text });
-              console.log('[JarvisHUD] Respuesta de Gemini:', res.data);
+              console.log('[JarvisHUD] Respuesta NLU:', res.data);
               
-              // Si hay redirección
-              if (res.data.command && res.data.command.type === 'redirect') {
-                  router.visit(res.data.command.url);
+              // Manejar comandos
+              if (res.data.command) {
+                  const cmd = res.data.command;
+                  if (cmd.type === 'redirect') {
+                      jarvisVoice.speak(res.data.voice, () => {
+                          router.visit(cmd.url);
+                      });
+                      return;
+                  }
+                  if (cmd.type === 'reload') {
+                      jarvisVoice.speak(res.data.voice, () => {
+                          window.location.reload();
+                      });
+                      return;
+                  }
+                  if (cmd.type === 'logout') {
+                      jarvisVoice.speak(res.data.voice, () => {
+                          const form = document.getElementById('logout-form');
+                          if (form) form.submit();
+                          else router.visit('/admin/logout', { method: 'post' });
+                      });
+                      return;
+                  }
+                  if (cmd.type === 'back') {
+                      jarvisVoice.speak(res.data.voice, () => {
+                          window.history.back();
+                      });
+                      return;
+                  }
               }
 
-              // Hablar la respuesta (Neural)
-              jarvisVoice.speakNeural(res.data.audio_base64, res.data.voice, () => {
+              // Hablar la respuesta (TTS nativo del navegador)
+              jarvisVoice.speak(res.data.voice, () => {
                   if (mountedRef.current) setStatus('idle');
               });
               
           } catch (error) {
-              console.error('Error de conexión con procesador neural:', error);
-              jarvisVoice.speak('Señor, perdí conexión temporal con mi procesador.', () => {
+              console.error('Error de conexión con motor NLU:', error);
+              jarvisVoice.speak('Señor, ocurrió un error de conexión.', () => {
                   if (mountedRef.current) setStatus('idle');
               });
           }

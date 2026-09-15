@@ -107,7 +107,8 @@ const jarvisVoice = {
   },
 
   /**
-   * TTS Robótico antiguo (Fallback)
+   * TTS Nativo mejorado — Selecciona la mejor voz en español disponible.
+   * Prioriza voces masculinas para sonar como Jarvis.
    */
   speak(text, onEndCallback) {
     this.cancelSpeechAndReset();
@@ -119,7 +120,25 @@ const jarvisVoice = {
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'es-ES';
-    utter.rate = 1.05;
+    utter.rate = 1.0;
+    utter.pitch = 0.9; // Ligeramente más grave para sonar profesional
+    utter.volume = 1.0;
+
+    // Intentar encontrar la mejor voz en español
+    const voices = speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      // Prioridad: Google español > Microsoft español > cualquier es-*
+      const spanishVoices = voices.filter(v => v.lang.startsWith('es'));
+      const preferred = spanishVoices.find(v => v.name.includes('Google') && v.name.includes('español')) 
+                     || spanishVoices.find(v => v.name.includes('Microsoft') && v.name.includes('Pablo'))
+                     || spanishVoices.find(v => v.name.includes('Microsoft'))
+                     || spanishVoices.find(v => v.lang === 'es-ES')
+                     || spanishVoices[0];
+      if (preferred) {
+        utter.voice = preferred;
+        utter.lang = preferred.lang;
+      }
+    }
 
     const done = () => {
       this._isSpeaking = false;
@@ -130,7 +149,7 @@ const jarvisVoice = {
       if (onEndCallback) onEndCallback();
     };
 
-    this._safetyTimer = setTimeout(done, 12000);
+    this._safetyTimer = setTimeout(done, 15000);
     utter.onend = done;
     utter.onerror = done;
     speechSynthesis.speak(utter);
