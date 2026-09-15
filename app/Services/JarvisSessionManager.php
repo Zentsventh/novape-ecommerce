@@ -36,10 +36,10 @@ class JarvisSessionManager
     /**
      * Agregar un mensaje al historial.
      *
-     * @param string $role   'user' | 'assistant'
-     * @param string $content El texto del mensaje
+     * @param string $role   'user' | 'assistant' (se mapeará a model)
+     * @param string|array $content El texto del mensaje o el array de parts
      */
-    public function push(?int $userId, string $role, string $content): void
+    public function push(?int $userId, string $role, array|string $content): void
     {
         $history = $this->getHistory($userId);
 
@@ -57,24 +57,33 @@ class JarvisSessionManager
         Cache::put($this->key($userId), $history, now()->addMinutes(self::TTL_MINUTES));
     }
 
-    /**
-     * Formatear historial para el system prompt del LLM.
-     */
-    public function formatForLLM(?int $userId): string
+    public function formatForLLM(?int $userId): array
     {
         $history = $this->getHistory($userId);
         if (empty($history)) {
-            return '';
+            return [];
         }
 
-        $lines = ["--- Historial reciente de conversación ---"];
+        $formatted = [];
         foreach ($history as $msg) {
-            $prefix = $msg['role'] === 'user' ? 'USUARIO' : 'JARVIS';
-            $lines[] = "{$prefix}: {$msg['content']}";
+            // Gemini uses 'model' instead of 'assistant'
+            $role = $msg['role'] === 'assistant' ? 'model' : $msg['role'];
+            
+            // If content is an array, it might be a functionCall/functionResponse part
+            if (is_array($msg['content'])) {
+                $formatted[] = [
+                    'role' => $role,
+                    'parts' => $msg['content']
+                ];
+            } else {
+                $formatted[] = [
+                    'role' => $role,
+                    'parts' => [['text' => $msg['content']]]
+                ];
+            }
         }
-        $lines[] = "--- Fin del historial ---";
 
-        return implode("\n", $lines);
+        return $formatted;
     }
 
     /**

@@ -1,116 +1,166 @@
+import { PorcupineWorker, BuiltInKeyword } from '@picovoice/porcupine-web';
+
 /**
- * Jarvis Voice Engine 2.0 — Speech Recognition & Synthesis
- * Arquitectura Alexa/Hermes: escucha continua, resultados interim, auto-recovery.
+ * Jarvis Voice Engine 3.0 — Neural & Edge AI Edition
+ * Arquitectura Alexa/Echo: Porcupine Wake-Word + ElevenLabs Neural TTS
  */
 const jarvisVoice = {
-  /** @type {SpeechRecognition|null} */
   _recognition: null,
-  _shouldBeListening: false,
+  _porcupineWorker: null,
+  _isListeningForWakeWord: false,
+  _isListeningForCommand: false,
   _isSpeaking: false,
   _onInterimCallback: null,
   _onFinalCallback: null,
   _onErrorCallback: null,
-  /** @type {SpeechSynthesisVoice|null} */
-  _cachedVoice: null,
-  _voiceLoaded: false,
+  _onWakeWordCallback: null,
+  _currentAudio: null, // HTMLAudioElement for Neural TTS
   _safetyTimer: null,
 
-  /**
-   * Busca y cachea la mejor voz española (se ejecuta una sola vez).
-   */
-  _getSpanishVoice() {
-    if (this._voiceLoaded) return this._cachedVoice;
-    const voices = speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) return null;
-    this._cachedVoice =
-      voices.find(v => v.lang.startsWith('es') && (v.name.includes('Pablo') || v.name.includes('Raul') || v.name.includes('Diego'))) ||
-      voices.find(v => v.lang.startsWith('es')) ||
-      null;
-    this._voiceLoaded = true;
-    return this._cachedVoice;
+  async initPorcupine() {
+    const accessKey = import.meta.env.VITE_PICOVOICE_ACCESS_KEY;
+    if (!accessKey) {
+      console.warn('[JarvisVoice] PICOVOICE_ACCESS_KEY no encontrada. Porcupine deshabilitado. Fallback a SpeechRecognition puro.');
+      return false;
+    }
+    
+    try {
+      this._porcupineWorker = await PorcupineWorker.create(
+        accessKey,
+        BuiltInKeyword.Jarvis,
+        (keywordLabel) => {
+          console.log(`[JarvisVoice] Wake word detectado: ${keywordLabel}`);
+          this._handleWakeWord();
+        }
+      );
+      console.log('[JarvisVoice] Motor Porcupine (Wake-Word) inicializado exitosamente.');
+      return true;
+    } catch (e) {
+      console.error('[JarvisVoice] Error inicializando Porcupine:', e);
+      return false;
+    }
+  },
+
+  _handleWakeWord() {
+    if (this._isSpeaking) {
+      this.cancelSpeechAndReset(); // Barge-in interrupción
+    }
+    if (this._onWakeWordCallback) {
+      this._onWakeWordCallback(); // Para brillar la esfera
+    }
+    
+    // Reproducir un pitido de confirmación (opcional)
+    // const beep = new Audio('/beep.mp3'); beep.play();
+    
+    // Activar reconocimiento de voz inmediatamente para escuchar el comando
+    this._startCommandRecognition();
   },
 
   /**
-   * Habla un texto usando SpeechSynthesis.
-   * Pausa la escucha mientras habla para evitar eco.
+   * Reproduce el audio neural devuelto por ElevenLabs.
    */
-  speak(text, onEndCallback) {
-    // Limpiar cualquier síntesis anterior
-    if (speechSynthesis.speaking || speechSynthesis.pending) {
-      speechSynthesis.cancel();
-    }
-    // Limpiar safety timer anterior
-    if (this._safetyTimer) {
-      clearTimeout(this._safetyTimer);
-      this._safetyTimer = null;
-    }
-
-    if (!text || text.trim() === '') {
-      if (onEndCallback) onEndCallback();
-      return;
+  speakNeural(base64Audio, fallbackText, onEndCallback) {
+    this.cancelSpeechAndReset(); // Corta cualquier audio previo
+    
+    if (!base64Audio) {
+      // Fallback a TTS robótico si no hay neural audio
+      console.warn('[JarvisVoice] No neural audio provided, falling back to Web Speech API');
+      return this.speak(fallbackText, onEndCallback);
     }
 
     this._isSpeaking = true;
-    this._pauseListening();
+    
+    try {
+      this._currentAudio = new Audio("data:audio/mpeg;base64," + base64Audio);
+      
+      const done = () => {
+        this._isSpeaking = false;
+        this._currentAudio = null;
+        if (this._safetyTimer) {
+          clearTimeout(this._safetyTimer);
+          this._safetyTimer = null;
+        }
+        if (onEndCallback) onEndCallback();
+      };
+
+      this._currentAudio.onended = done;
+      this._currentAudio.onerror = done;
+
+      // Safety timeout de 15 segundos
+      this._safetyTimer = setTimeout(() => {
+        if (this._isSpeaking) {
+            console.warn('[JarvisVoice] Neural audio safety timeout');
+            done();
+        }
+      }, 15000);
+
+      this._currentAudio.play().catch(e => {
+        console.error('[JarvisVoice] Error reproduciendo Neural Audio:', e);
+        done();
+      });
+
+    } catch (e) {
+      console.error('[JarvisVoice] Error cargando Neural Audio:', e);
+      this._isSpeaking = false;
+      if (onEndCallback) onEndCallback();
+    }
+  },
+
+  /**
+   * TTS Robótico antiguo (Fallback)
+   */
+  speak(text, onEndCallback) {
+    this.cancelSpeechAndReset();
+    if (!text) {
+      if (onEndCallback) onEndCallback();
+      return;
+    }
+    this._isSpeaking = true;
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'es-ES';
     utter.rate = 1.05;
 
-    const voice = this._getSpanishVoice();
-    if (voice) utter.voice = voice;
-
-    // Callback de finalización unificado
     const done = () => {
+      this._isSpeaking = false;
       if (this._safetyTimer) {
         clearTimeout(this._safetyTimer);
         this._safetyTimer = null;
       }
-      this._isSpeaking = false;
-      this._resumeListening();
       if (onEndCallback) onEndCallback();
     };
 
-    // Safety: si onend nunca se dispara (ej: navegación lo mata), reset tras 12s
-    this._safetyTimer = setTimeout(() => {
-      if (this._isSpeaking) {
-        console.warn('[JarvisVoice] Safety timeout — forzando reset');
-        done();
-      }
-    }, 12000);
-
+    this._safetyTimer = setTimeout(done, 12000);
     utter.onend = done;
     utter.onerror = done;
-
     speechSynthesis.speak(utter);
   },
 
-  /**
-   * Inicia escucha continua estilo Alexa.
-   */
-  startContinuous(onInterim, onFinal, onError) {
-    this._shouldBeListening = true;
+  async startContinuous(onWakeWord, onInterim, onFinal, onError) {
+    this._onWakeWordCallback = onWakeWord;
     this._onInterimCallback = onInterim;
     this._onFinalCallback = onFinal;
     this._onErrorCallback = onError;
-    this._startEngine();
-  },
 
-  /**
-   * Detiene la escucha por completo.
-   */
-  stopListening() {
-    this._shouldBeListening = false;
-    if (this._recognition) {
-      try { this._recognition.abort(); } catch (_) {}
-      this._recognition = null;
+    // Si ya inicializamos porcupine, arrancar WebVoiceProcessor (micrófono real continuo)
+    if (this._porcupineWorker) {
+        // En una implementación real requerimos @picovoice/web-voice-processor para alimentar a PorcupineWorker
+        // import { WebVoiceProcessor } from '@picovoice/web-voice-processor';
+        // await WebVoiceProcessor.subscribe(this._porcupineWorker);
+        // NOTA: Para no romper el sistema si falla picovoice, usaremos el fallback por ahora
+        console.warn('[JarvisVoice] Integración profunda de WebVoiceProcessor pendiente. Usando fallback.');
     }
+    
+    // Fallback: usar SpeechRecognition continuo simulando Wake Word
+    this._startFallbackEngine();
   },
 
-  /**
-   * Cancela síntesis y fuerza reset de flags — usar después de navegación.
-   */
   cancelSpeechAndReset() {
+    if (this._currentAudio) {
+      this._currentAudio.pause();
+      this._currentAudio.currentTime = 0;
+      this._currentAudio = null;
+    }
     if (speechSynthesis.speaking || speechSynthesis.pending) {
       speechSynthesis.cancel();
     }
@@ -119,93 +169,86 @@ const jarvisVoice = {
       this._safetyTimer = null;
     }
     this._isSpeaking = false;
-    // Forzar destrucción del recognition actual para empezar limpio
+    this._isListeningForCommand = false;
     if (this._recognition) {
       try { this._recognition.abort(); } catch (_) {}
       this._recognition = null;
     }
-    // Re-arrancar el motor con un pequeño delay
-    if (this._shouldBeListening) {
-      setTimeout(() => this._startEngine(), 200);
-    }
+    setTimeout(() => this._startFallbackEngine(), 200);
   },
 
-  _pauseListening() {
+  stopListening() {
+    this._isListeningForWakeWord = false;
+    this._isListeningForCommand = false;
     if (this._recognition) {
       try { this._recognition.abort(); } catch (_) {}
+      this._recognition = null;
     }
   },
 
-  _resumeListening() {
-    if (this._shouldBeListening && !this._isSpeaking) {
-      setTimeout(() => this._startEngine(), 150);
-    }
-  },
-
-  _startEngine() {
-    // No arrancar si ya hay uno activo, no debería estar escuchando, o está hablando
-    if (this._recognition || !this._shouldBeListening || this._isSpeaking) return;
+  // ---------------- FALLBACK ENGINE ----------------
+  _startFallbackEngine() {
+    if (this._recognition || this._isSpeaking) return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error('[JarvisVoice] SpeechRecognition no soportado');
-      if (this._onErrorCallback) this._onErrorCallback('not_supported');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
+    this._isListeningForWakeWord = true;
     const rec = new SpeechRecognition();
     rec.lang = 'es-ES';
     rec.interimResults = true;
-    rec.maxAlternatives = 1;
     rec.continuous = true;
 
     rec.onresult = (ev) => {
-      let interimTranscript = '';
       let finalTranscript = '';
-
+      let interimTranscript = '';
       for (let i = ev.resultIndex; i < ev.results.length; ++i) {
-        if (ev.results[i].isFinal) {
-          finalTranscript += ev.results[i][0].transcript;
-        } else {
-          interimTranscript += ev.results[i][0].transcript;
+        if (ev.results[i].isFinal) finalTranscript += ev.results[i][0].transcript;
+        else interimTranscript += ev.results[i][0].transcript;
+      }
+      
+      const transcript = (interimTranscript || finalTranscript).trim().toLowerCase();
+      
+      // Simular interrupción (Barge-in falso)
+      if (this._isSpeaking && transcript.length > 3) {
+          this.cancelSpeechAndReset();
+      }
+
+      if (this._isListeningForWakeWord) {
+        if (transcript.includes('jarvis')) {
+          this._handleWakeWord();
         }
-      }
-
-      if (interimTranscript && this._onInterimCallback) {
-        this._onInterimCallback(interimTranscript);
-      }
-
-      if (finalTranscript && this._onFinalCallback) {
-        this._onFinalCallback(finalTranscript);
-        // Abort para limpiar y reiniciar después de un resultado final
-        try { rec.abort(); } catch (_) {}
-      }
-    };
-
-    rec.onerror = (ev) => {
-      // 'no-speech' es normal en modo continuo, no reportar
-      if (ev.error !== 'no-speech' && ev.error !== 'aborted' && this._onErrorCallback) {
-        this._onErrorCallback(ev.error);
+      } else if (this._isListeningForCommand) {
+        if (interimTranscript && this._onInterimCallback) this._onInterimCallback(interimTranscript);
+        if (finalTranscript && this._onFinalCallback) {
+            this._isListeningForCommand = false;
+            this._isListeningForWakeWord = true;
+            this._onFinalCallback(finalTranscript);
+            try { rec.abort(); } catch (_) {}
+        }
       }
     };
 
     rec.onend = () => {
       this._recognition = null;
-      // Auto-recovery: si murió pero debería estar escuchando, reiniciar
-      if (this._shouldBeListening && !this._isSpeaking) {
-        setTimeout(() => this._startEngine(), 300);
+      if (!this._isSpeaking) {
+        setTimeout(() => this._startFallbackEngine(), 300);
       }
     };
 
-    this._recognition = rec;
-
     try {
       rec.start();
+      this._recognition = rec;
     } catch (e) {
-      console.warn('[JarvisVoice] Error al arrancar recognition:', e);
       this._recognition = null;
-      setTimeout(() => this._startEngine(), 1000);
     }
+  },
+
+  _startCommandRecognition() {
+    // Cambia al estado de escuchar el comando después de decir Jarvis
+    this._isListeningForWakeWord = false;
+    this._isListeningForCommand = true;
+    console.log('[JarvisVoice] Escuchando comando activamente...');
   }
 };
 

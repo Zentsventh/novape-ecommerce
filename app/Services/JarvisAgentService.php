@@ -45,7 +45,6 @@ class JarvisAgentService
     {
         $start = microtime(true);
 
-        // 1. Limpiar wake word
         $clean = preg_replace('/^(jarvis[,.\s]*)/i', '', trim($message));
         $clean = trim($clean);
 
@@ -53,245 +52,221 @@ class JarvisAgentService
             return $this->response('No escuché nada. ¿Podrías repetir?', null, 'empty_input');
         }
 
-        // 2. Guardar en historial
+        // Add user message to history
         $this->session->push($userId, 'user', $clean);
 
-        // 3. Pedir al LLM que clasifique intent + extraiga slots
-        $toolDecision = $this->resolveIntent($clean, $userId);
+        // AGENTIC LOOP (Max 3 turns to prevent infinite loops)
+        $maxTurns = 3;
+        $turn = 0;
+        $result = null;
+        $lastToolUI = null;
+        $lastToolAction = null;
+        $lastToolCommand = null;
 
-        // 4. Ejecutar la tool decidida
-        $result = $this->executeTool($toolDecision);
+        while ($turn < $maxTurns) {
+            $turn++;
+            $history = $this->session->formatForLLM($userId);
+            
+            $systemPrompt = "Eres JARVIS, el asistente de IA del panel de control de Novape. 
+Tu trabajo es ayudar al administrador con sus tareas de forma eficiente.
+REGLAS VITALES: 
+- SIEMPRE utiliza las herramientas (tools) disponibles para buscar información en la base de datos o ejecutar acciones.
+- Si te piden modificar algo y falta un parámetro crítico, NO adivines, pregúntale al usuario para confirmar.
+- Nunca inventes datos de ventas o inventario.
+- Tus respuestas de texto (cuando le hablas al usuario) deben ser conversacionales, muy cortas (1-2 oraciones) y al grano.
+- Eres amable, leal y sumamente eficiente. Refiérete al usuario como 'Señor' o 'Administrador'.";
 
-        // 5. Guardar respuesta en historial
-        $this->session->push($userId, 'assistant', $result['voice']);
+            $response = $this->llm->chatWithTools($history, $this->getToolsSchema(), $systemPrompt, 30);
+            
+            if (!$response || !isset($response['parts'])) {
+                $result = $this->response(
+                    "Hubo un problema de conexión con mi procesador neural, pero ejecuté la orden parcial.", 
+                    $lastToolUI ?? null, 
+                    'error',
+                    $lastToolCommand ?? null
+                );
+                break;
+            }
+
+            $part = $response['parts'][0];
+
+            if (isset($part['functionCall'])) {
+                $funcName = $part['functionCall']['name'];
+                $args = $part['functionCall']['args'] ?? [];
+                
+                Log::info("Jarvis Agentic Tool Call: {$funcName}", $args);
+                
+                // Guardar la decisión del modelo en el historial
+                $this->session->push($userId, 'model', [['functionCall' => $part['functionCall']]]);
+
+                // Ejecutar la herramienta PHP local
+                $toolResult = $this->executeTool($funcName, $args);
+                
+                // Devolver el resultado a Gemini (role function o user dependiendo de la spec, usamos function)
+                $this->session->push($userId, 'function', [
+                    [
+                        'functionResponse' => [
+                            'name' => $funcName,
+                            'response' => ['result' => $toolResult['data']]
+                        ]
+                    ]
+                ]);
+
+                // Guardar UI y actions para acoplarlas a la respuesta final de voz
+                if (isset($toolResult['ui'])) $lastToolUI = $toolResult['ui'];
+                if (isset($toolResult['action'])) $lastToolAction = $toolResult['action'];
+                if (isset($toolResult['command'])) $lastToolCommand = $toolResult['command'];
+                
+                continue;
+            } 
+            
+            if (isset($part['text'])) {
+                $voice = $part['text'];
+                
+                $result = $this->response($voice, $lastToolUI, $lastToolAction ?? 'chat', $lastToolCommand);
+                $this->session->push($userId, 'model', $voice);
+                break;
+            }
+        }
+
+        if (!$result) {
+            $result = $this->response("Llegué a mi límite de razonamiento.", null, 'error');
+        }
+
+        // --- ELEVENLABS NEURAL TTS INTEGRATION ---
+        if (!empty($result['voice'])) {
+            $elevenLabs = new \App\Services\ElevenLabsService();
+            $audioBase64 = $elevenLabs->textToSpeechBase64($result['voice']);
+            if ($audioBase64) {
+                $result['audio_base64'] = $audioBase64;
+            }
+        }
 
         $result['response_time_ms'] = (int)((microtime(true) - $start) * 1000);
         return $result;
     }
 
     /**
-     * Resolver intent usando el LLM como NLU engine (patrón Alexa).
-     * El LLM analiza el mensaje y decide qué tool usar.
+     * Define the tools available for Gemini to call natively.
      */
-    private function resolveIntent(string $message, ?int $userId): array
+    private function getToolsSchema(): array
     {
-        $historyContext = $this->session->formatForLLM($userId);
-
-        $systemPrompt = <<<PROMPT
-Eres el motor NLU de JARVIS, un asistente de voz para el panel de control de Novape (e-commerce peruano).
-
-Tu trabajo es analizar el mensaje del usuario y devolver un JSON con la herramienta (tool) que debe ejecutarse.
-
-## HERRAMIENTAS DISPONIBLES:
-
-1. **navigate** — Navegar a una sección del panel.
-   Slots: { "section": "dashboard|pos|pedidos|inventario|productos|compras|gastos|almacenes|banners|clientes|proveedores|cupones|trabajadores|roles|zonas|categorias|marcas|ajustes|metodos_pago|notificaciones|tienda|crear_producto|crear_cupon" }
-
-2. **query_count** — Contar registros de una entidad.
-   Slots: { "entity": "productos|pedidos|cupones|clientes|proveedores|almacenes|categorias|marcas|gastos|variantes" }
-
-3. **query_sales** — Consultar ventas por período.
-   Slots: { "period": "hoy|semana|mes|año" }
-
-4. **query_stock** — Consultar stock crítico o de un producto.
-   Slots: { "type": "critico|producto", "product_name": "nombre del producto (si aplica)" }
-
-5. **query_orders** — Estado de pedidos.
-   Slots: { "status": "pendiente|procesando|enviado|entregado|cancelado|todos" }
-
-6. **query_top** — Rankings: más vendidos, etc.
-   Slots: { "type": "vendidos|recientes|caros", "limit": 5 }
-
-7. **search_product** — Buscar producto por nombre.
-   Slots: { "query": "texto de búsqueda" }
-
-8. **query_expenses** — Consultar gastos.
-   Slots: { "period": "hoy|semana|mes" }
-
-9. **system_status** — Diagnóstico del sistema.
-   Slots: {}
-
-10. **help** — Mostrar capacidades de Jarvis.
-    Slots: {}
-
-11. **greeting** — Saludos, presentación, preguntas sobre identidad.
-    Slots: { "type": "hola|identidad|despedida" }
-
-12. **conversation** — Cualquier otra cosa que no encaje en las anteriores. Conversación libre.
-    Slots: { "topic": "tema de la pregunta" }
-
-## REGLAS:
-- Responde SOLO con JSON válido.
-- El JSON DEBE tener: { "tool": "nombre_tool", "slots": { ... }, "confidence": 0.0-1.0 }
-- Usa el historial para resolver referencias como "cuántos hay" (refiriéndose a la última entidad mencionada).
-- Si el usuario dice "llévame", "abre", "ve a", "mándame", "derívame", etc. → siempre es **navigate**.
-- Si dice "cuántos", "cuántas", "total de" → siempre es **query_count**.
-- Si dice "busca", "encuentra", "dónde está" → siempre es **search_product**.
-- Si no estás seguro, usa "conversation" con confidence baja.
-
-{$historyContext}
-PROMPT;
-
-        $result = $this->llm->generateJSON($systemPrompt, $message, 15);
-
-        if ($result && isset($result['tool'])) {
-            Log::info('Jarvis NLU resolved', $result);
-            return $result;
-        }
-
-        // Fallback: clasificación rápida con regex si el LLM falla
-        Log::warning('Jarvis NLU fallback to regex', ['message' => $message]);
-        return $this->regexFallback($message);
+        return [
+            [
+                'name' => 'update_coupon_discount',
+                'description' => 'Actualiza el porcentaje de descuento de un cupón existente en la base de datos.',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'codigo' => [
+                            'type' => 'STRING',
+                            'description' => 'El código exacto del cupón (ej: SUMMER, DESC10).'
+                        ],
+                        'porcentaje' => [
+                            'type' => 'INTEGER',
+                            'description' => 'El nuevo porcentaje de descuento (ej: 12, 15, 20).'
+                        ]
+                    ],
+                    'required' => ['codigo', 'porcentaje']
+                ]
+            ],
+            [
+                'name' => 'navigate',
+                'description' => 'Navega a una sección específica del panel de control.',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'section' => [
+                            'type' => 'STRING',
+                            'description' => 'La sección a la que navegar: dashboard, pedidos, inventario, productos, cupones, etc.'
+                        ]
+                    ],
+                    'required' => ['section']
+                ]
+            ],
+            [
+                'name' => 'query_count',
+                'description' => 'Cuenta cuántos registros existen de una entidad en la base de datos.',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'entity' => [
+                            'type' => 'STRING',
+                            'description' => 'La entidad a contar: productos, pedidos, cupones, clientes, etc.'
+                        ]
+                    ],
+                    'required' => ['entity']
+                ]
+            ],
+            [
+                'name' => 'query_stock',
+                'description' => 'Consulta el stock de un producto o lista productos con stock crítico.',
+                'parameters' => [
+                    'type' => 'OBJECT',
+                    'properties' => [
+                        'type' => [
+                            'type' => 'STRING',
+                            'description' => 'El tipo de consulta de stock: "critico" o "producto"'
+                        ],
+                        'product_name' => [
+                            'type' => 'STRING',
+                            'description' => 'El nombre del producto a buscar, si type es "producto"'
+                        ]
+                    ],
+                    'required' => ['type']
+                ]
+            ]
+        ];
     }
 
     /**
-     * Fallback de regex ultrarrápido si el LLM no responde.
-     * Garantiza que Jarvis SIEMPRE responde algo.
+     * Enrutador de herramientas locales invocadas por el LLM.
      */
-    private function regexFallback(string $msg): array
+    private function executeTool(string $tool, array $args): array
     {
-        $m = mb_strtolower($msg);
-
-        // Navegación
-        $navVerbs = '(mandame|mándame|derivame|derívame|llevame|llévame|ir\s*a|abre|abrir|muestra|muéstrame|entra|pasa|navega|ve\s*a|ve\s*al|dame|quiero\s*ver|vamos)';
-        if (preg_match("/{$navVerbs}/i", $m)) {
-            $sectionMap = [
-                'dashboard' => '/dashboard|panel|inicio|home/',
-                'pos' => '/pos|punto\s*de\s*venta|caja/',
-                'pedidos' => '/venta|pedido|orden/',
-                'inventario' => '/inventario|stock/',
-                'productos' => '/producto/',
-                'compras' => '/compra/',
-                'gastos' => '/gasto/',
-                'almacenes' => '/almac[eé]n|bodega/',
-                'banners' => '/banner|cms|slider/',
-                'clientes' => '/cliente/',
-                'proveedores' => '/proveedor/',
-                'cupones' => '/cup[oó]n|descuento/',
-                'trabajadores' => '/usuario|trabajador|empleado/',
-                'roles' => '/rol|permiso/',
-                'zonas' => '/zona|env[ií]o/',
-                'categorias' => '/categor[ií]a/',
-                'marcas' => '/marca/',
-                'ajustes' => '/ajuste|configuraci[oó]n/',
-                'metodos_pago' => '/m[eé]todo.*pago|pago/',
-                'notificaciones' => '/notificaci[oó]n|alerta/',
-                'tienda' => '/tienda|frontend|web/',
-            ];
-
-            foreach ($sectionMap as $section => $pattern) {
-                if (preg_match($pattern . 'i', $m)) {
-                    return ['tool' => 'navigate', 'slots' => ['section' => $section], 'confidence' => 0.8];
-                }
-            }
-            return ['tool' => 'navigate', 'slots' => ['section' => 'dashboard'], 'confidence' => 0.5];
-        }
-
-        // Conteos
-        if (preg_match('/(cuantos|cuántos|cuantas|cuántas|total\s*de)/i', $m)) {
-            $entityMap = [
-                'productos'   => '/producto/',
-                'cupones'     => '/cup[oó]n/',
-                'clientes'    => '/cliente/',
-                'proveedores' => '/proveedor/',
-                'pedidos'     => '/pedido|orden/',
-                'categorias'  => '/categor[ií]a/',
-                'marcas'      => '/marca/',
-                'almacenes'   => '/almac[eé]n/',
-                'gastos'      => '/gasto/',
-            ];
-            foreach ($entityMap as $entity => $pattern) {
-                if (preg_match($pattern . 'i', $m)) {
-                    return ['tool' => 'query_count', 'slots' => ['entity' => $entity], 'confidence' => 0.8];
-                }
-            }
-        }
-
-        // Ventas
-        if (preg_match('/venta/i', $m)) {
-            $period = 'hoy';
-            if (str_contains($m, 'semana')) $period = 'semana';
-            elseif (str_contains($m, 'mes')) $period = 'mes';
-            elseif (str_contains($m, 'año')) $period = 'año';
-            return ['tool' => 'query_sales', 'slots' => ['period' => $period], 'confidence' => 0.8];
-        }
-
-        // Stock
-        if (preg_match('/stock\s*(bajo|crit|crítico)/i', $m)) {
-            return ['tool' => 'query_stock', 'slots' => ['type' => 'critico'], 'confidence' => 0.9];
-        }
-
-        // Saludos
-        if (preg_match('/^(hola|hey|buenas?|buenos|saludos)/i', $m)) {
-            return ['tool' => 'greeting', 'slots' => ['type' => 'hola'], 'confidence' => 0.9];
-        }
-
-        if (preg_match('/(como te llamas|cómo te llamas|quien eres|quién eres|tu nombre)/i', $m)) {
-            return ['tool' => 'greeting', 'slots' => ['type' => 'identidad'], 'confidence' => 0.9];
-        }
-
-        // Ayuda
-        if (preg_match('/(ayuda|que puedes|qué puedes|comandos)/i', $m)) {
-            return ['tool' => 'help', 'slots' => [], 'confidence' => 0.9];
-        }
-
-        // Sistema
-        if (preg_match('/(estado.*sistema|status|diagn[oó]stico)/i', $m)) {
-            return ['tool' => 'system_status', 'slots' => [], 'confidence' => 0.9];
-        }
-
-        // Top productos
-        if (preg_match('/(top|más vendido|mas vendido|populares)/i', $m)) {
-            return ['tool' => 'query_top', 'slots' => ['type' => 'vendidos', 'limit' => 5], 'confidence' => 0.8];
-        }
-
-        // Buscar producto
-        if (preg_match('/(busca|encuentra|búsqueda|dónde está|donde esta)/i', $m)) {
-            $query = preg_replace('/(busca|encuentra|búsqueda|buscar|dónde está|donde esta)\s*/i', '', $m);
-            return ['tool' => 'search_product', 'slots' => ['query' => trim($query)], 'confidence' => 0.7];
-        }
-
-        // Pedidos pendientes
-        if (preg_match('/pedidos?\s*(pendiente|sin\s*procesar)/i', $m)) {
-            return ['tool' => 'query_orders', 'slots' => ['status' => 'pendiente'], 'confidence' => 0.9];
-        }
-
-        // Gastos
-        if (preg_match('/gasto/i', $m)) {
-            $period = 'mes';
-            if (str_contains($m, 'hoy')) $period = 'hoy';
-            elseif (str_contains($m, 'semana')) $period = 'semana';
-            return ['tool' => 'query_expenses', 'slots' => ['period' => $period], 'confidence' => 0.8];
-        }
-
-        // Fallback: conversación libre
-        return ['tool' => 'conversation', 'slots' => ['topic' => $m], 'confidence' => 0.3];
-    }
-
-    /**
-     * Ejecutar la tool decidida por el NLU.
-     * Cada tool es un método independiente — patrón Alexa Skills.
-     */
-    private function executeTool(array $decision): array
-    {
-        $tool  = $decision['tool'] ?? 'conversation';
-        $slots = $decision['slots'] ?? [];
-
         return match ($tool) {
-            'navigate'       => $this->toolNavigate($slots),
-            'query_count'    => $this->toolQueryCount($slots),
-            'query_sales'    => $this->toolQuerySales($slots),
-            'query_stock'    => $this->toolQueryStock($slots),
-            'query_orders'   => $this->toolQueryOrders($slots),
-            'query_top'      => $this->toolQueryTop($slots),
-            'search_product' => $this->toolSearchProduct($slots),
-            'query_expenses' => $this->toolQueryExpenses($slots),
-            'system_status'  => $this->toolSystemStatus(),
-            'help'           => $this->toolHelp(),
-            'greeting'       => $this->toolGreeting($slots),
-            'conversation'   => $this->toolConversation($slots),
-            default          => $this->toolConversation($slots),
+            'update_coupon_discount' => $this->toolUpdateCouponDiscount($args),
+            'navigate'       => $this->adaptLegacyTool($this->toolNavigate($args)),
+            'query_count'    => $this->adaptLegacyTool($this->toolQueryCount($args)),
+            'query_stock'    => $this->adaptLegacyTool($this->toolQueryStock($args)),
+            default          => ['data' => "Herramienta desconocida o no implementada."],
         };
+    }
+
+    /**
+     * Adapta la respuesta de los métodos antiguos para que encajen en el flujo agéntico.
+     */
+    private function adaptLegacyTool(array $legacyResult): array
+    {
+        return [
+            'data'    => $legacyResult['voice'] ?? 'Acción ejecutada en base de datos.',
+            'ui'      => $legacyResult['ui'] ?? null,
+            'action'  => $legacyResult['action'] ?? null,
+            'command' => $legacyResult['command'] ?? null,
+        ];
+    }
+
+    /**
+     * Herramienta nivel "Santo Grial": Modificación de base de datos de cupones.
+     */
+    private function toolUpdateCouponDiscount(array $args): array
+    {
+        $codigo = $args['codigo'] ?? '';
+        $porcentaje = $args['porcentaje'] ?? 0;
+
+        $cupon = Cupon::where('codigo', $codigo)->first();
+        if (!$cupon) {
+            return ['data' => "Error: No encontré ningún cupón con el código '{$codigo}' en la base de datos."];
+        }
+
+        $viejo = $cupon->porcentaje;
+        $cupon->porcentaje = $porcentaje;
+        $cupon->save();
+
+        return [
+            'data' => "Éxito: El cupón {$codigo} ha sido actualizado del {$viejo}% al {$porcentaje}%.",
+            'action' => 'coupon_updated'
+        ];
     }
 
     // ════════════════════════════════════════════════════════════════

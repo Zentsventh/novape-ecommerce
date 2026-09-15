@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import jarvisVoice from '../lib/jarvisVoice';
-import { parseIntent } from '../lib/intentParser';
-import { executeIntent } from '../lib/commandRouter';
 import { router } from '@inertiajs/react';
 import '../../css/jarvis.css';
 
@@ -20,47 +19,61 @@ export default function JarvisHUD() {
 
   // ─── Voice Engine: start continuous listening ─────────────────
   useEffect(() => {
-    jarvisVoice.startContinuous(
-      // onInterim — solo actualizar el estado visual
-      (text) => {
-        if (mountedRef.current && status !== 'processing' && status !== 'speaking') {
-          setStatus('listening');
+    // Inicializar Picovoice si está disponible
+    jarvisVoice.initPorcupine().then(() => {
+      jarvisVoice.startContinuous(
+        // onWakeWord — Despierta visualmente
+        () => {
+          if (mountedRef.current && status !== 'processing' && status !== 'speaking') {
+            setStatus('listening');
+          }
+        },
+        // onInterim — solo actualizar el estado visual
+        (text) => {
+          if (mountedRef.current && status !== 'processing' && status !== 'speaking') {
+            setStatus('listening');
+          }
+        },
+        // onFinal — Llamar a la API agéntica (Gemini)
+        async (text) => {
+          if (!mountedRef.current) return;
+
+          const cleanText = text.toLowerCase().trim();
+          
+          // Marcar como procesando
+          setStatus('processing');
+          console.log('[JarvisHUD] Enviando mensaje a Gemini:', cleanText);
+
+          try {
+              // Llamada al Santo Grial
+              const res = await axios.post('/api/jarvis/admin/message', { message: text });
+              console.log('[JarvisHUD] Respuesta de Gemini:', res.data);
+              
+              // Si hay redirección
+              if (res.data.command && res.data.command.type === 'redirect') {
+                  router.visit(res.data.command.url);
+              }
+
+              // Hablar la respuesta (Neural)
+              jarvisVoice.speakNeural(res.data.audio_base64, res.data.voice, () => {
+                  if (mountedRef.current) setStatus('idle');
+              });
+              
+          } catch (error) {
+              console.error('Error de conexión con procesador neural:', error);
+              jarvisVoice.speak('Señor, perdí conexión temporal con mi procesador.', () => {
+                  if (mountedRef.current) setStatus('idle');
+              });
+          }
+        },
+        // onError
+        (err) => {
+          if (mountedRef.current && status === 'listening') {
+            setStatus('idle');
+          }
         }
-      },
-      // onFinal — parsear y ejecutar comando
-      (text) => {
-        if (!mountedRef.current) return;
-
-        const intent = parseIntent(text);
-
-        // Si es ignore (sin wake word), no hacer nada
-        if (intent.type === 'ignore') return;
-
-        // Marcar como procesando
-        setStatus('processing');
-
-        // Ejecutar el intent
-        const handled = executeIntent(intent);
-
-        // Si no se manejó (no debería pasar), volver a idle
-        if (!handled && mountedRef.current) {
-          setStatus('idle');
-        }
-      },
-      // onError
-      (err) => {
-        if (mountedRef.current && status === 'listening') {
-          setStatus('idle');
-        }
-      }
-    );
-
-    // Saludo inicial
-    setTimeout(() => {
-      jarvisVoice.speak('Jarvis en línea. Di Jarvis seguido de un comando.', () => {
-        if (mountedRef.current) setStatus('idle');
-      });
-    }, 1500);
+      );
+    });
 
     // Cleanup: no re-ejecutar
     // eslint-disable-next-line react-hooks/exhaustive-deps

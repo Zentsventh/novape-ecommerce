@@ -19,8 +19,8 @@ class GeminiService
     {
         // Se recomienda mover esto a .env en el futuro (GEMINI_API_KEY)
         $this->apiKey = env('GEMINI_API_KEY', '');
-        // gemini-1.5-flash es el modelo más rápido y optimizado para tool calling / respuestas cortas
-        $this->model  = 'gemini-1.5-flash'; 
+        // gemini-2.5-flash es el modelo más rápido y optimizado para tool calling / respuestas cortas
+        $this->model  = 'gemini-2.5-flash'; 
         $this->baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}";
     }
 
@@ -127,6 +127,52 @@ class GeminiService
         return null;
     }
     
+    /**
+     * Comunicación agéntica con Function Calling.
+     * $history es un array con el formato nativo de Gemini:
+     * [['role' => 'user'|'model', 'parts' => [...]]]
+     */
+    public function chatWithTools(array $history, array $tools, string $systemPrompt = '', int $timeout = 30): ?array
+    {
+        try {
+            $payload = [
+                'contents' => $history,
+                'tools' => [
+                    ['functionDeclarations' => $tools]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.2,
+                ]
+            ];
+
+            if ($systemPrompt !== '') {
+                $payload['systemInstruction'] = [
+                    'parts' => [['text' => $systemPrompt]]
+                ];
+            }
+
+            $response = Http::timeout($timeout)
+                ->withoutVerifying()
+                ->withHeaders(['Content-Type' => 'application/json'])
+                ->post("{$this->baseUrl}:generateContent?key={$this->apiKey}", $payload);
+
+            if ($response->successful()) {
+                return $response->json('candidates.0.content');
+            }
+
+            Log::error('GeminiService::chatWithTools failed', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('GeminiService::chatWithTools exception', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
+    }
+
     /**
      * Verificar que el API key funciona y hay conexión.
      */
