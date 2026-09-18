@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -38,7 +40,7 @@ class Comprobante extends Model
         'operaciones_gravadas' => 'decimal:2',
     ];
 
-    public function pedido()
+    public function pedido(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Pedido::class);
     }

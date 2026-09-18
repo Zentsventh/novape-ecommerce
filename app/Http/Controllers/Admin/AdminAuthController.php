@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\Admin\Auth\AdminLoginRequest;
 
 class AdminAuthController extends Controller
 {
@@ -17,13 +18,9 @@ class AdminAuthController extends Controller
         return Inertia::render('Admin/Login');
     }
 
-    public function login(Request $request)
+    public function login(AdminLoginRequest $request)
     {
-
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
+        $credentials = $request->validated();
 
         if (Auth::guard('admin')->attempt(['email' => $credentials['email'], 'password' => $credentials['password'], 'estado' => 'activo'])) {
             $request->session()->regenerate();

@@ -1,8 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Finance\StoreExpenseRequest;
+use App\Http\Requests\Admin\Finance\UpdateExpenseRequest;
+use App\Services\Admin\Finance\ExpenseTrackingService;
 use App\Models\Gasto;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,83 +15,42 @@ use App\Models\ConfiguracionSitio;
 
 class GastoController extends Controller
 {
+    public function __construct(
+        private readonly ExpenseTrackingService $expenseService
+    ) {}
+
     public function index(Request $request)
     {
-        $startDate = $request->query('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->query('end_date', now()->endOfMonth()->toDateString());
-        $search = $request->query('search', '');
-        $categoria = $request->query('categoria', '');
-
-        $query = Gasto::query();
-
-        if ($startDate && $startDate !== '') {
-            $query->whereDate('fecha_gasto', '>=', $startDate);
-        }
-        if ($endDate && $endDate !== '') {
-            $query->whereDate('fecha_gasto', '<=', $endDate);
-        }
-        
-        if ($search && $search !== '') {
-            $query->where(function($q) use ($search) {
-                $q->where('concepto', 'like', "%{$search}%")
-                  ->orWhere('monto', 'like', "%{$search}%");
-            });
-        }
-        
-        if ($categoria && $categoria !== '' && $categoria !== 'Todos') {
-            $query->where('categoria', $categoria);
-        }
-
-        $gastos = $query->orderBy('fecha_gasto', 'desc')->paginate(15);
-        $totalGastos = $query->sum('monto');
-        $logoUrl = ConfiguracionSitio::obtener('logo_url');
+        $filters = [
+            'start_date' => $request->query('start_date', now()->startOfMonth()->toDateString()),
+            'end_date' => $request->query('end_date', now()->endOfMonth()->toDateString()),
+            'search' => $request->query('search', ''),
+            'categoria' => $request->query('categoria', ''),
+        ];
 
         return Inertia::render('Admin/Gastos/Index', [
-            'gastos' => $gastos,
-            'totalGastos' => $totalGastos,
-            'logoUrl' => $logoUrl,
-            'filters' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-                'search' => $search,
-                'categoria' => $categoria
-            ]
+            'gastos' => $this->expenseService->getExpenses($filters),
+            'totalGastos' => $this->expenseService->getTotalExpenses($filters),
+            'logoUrl' => ConfiguracionSitio::obtener('logo_url'),
+            'filters' => $filters
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreExpenseRequest $request)
     {
-        $request->validate([
-            'concepto' => 'required|string|max:255',
-            'monto' => 'required|numeric|min:0',
-            'categoria' => 'required|string',
-            'tipo' => 'required|in:fijo,variable',
-            'fecha_gasto' => 'required|date',
-        ]);
-
-        Gasto::create($request->all());
-
+        $this->expenseService->createExpense($request->validated());
         return redirect()->back()->with('success', 'Gasto registrado correctamente.');
     }
 
-    public function destroy($id)
+    public function update(UpdateExpenseRequest $request, int $id)
     {
-        Gasto::findOrFail($id)->delete();
-        return redirect()->back()->with('success', 'Gasto eliminado.');
+        $this->expenseService->updateExpense(Gasto::findOrFail($id), $request->validated());
+        return redirect()->back()->with('success', 'Gasto actualizado correctamente.');
     }
 
-    public function update(Request $request, $id)
+    public function destroy(int $id)
     {
-        $request->validate([
-            'concepto' => 'required|string|max:255',
-            'monto' => 'required|numeric|min:0',
-            'categoria' => 'required|string',
-            'fecha_gasto' => 'required|date',
-        ]);
-
-        $gasto = Gasto::findOrFail($id);
-        $gasto->update($request->all());
-
-        return redirect()->back()->with('success', 'Gasto actualizado correctamente.');
+        $this->expenseService->deleteExpense(Gasto::findOrFail($id));
+        return redirect()->back()->with('success', 'Gasto eliminado.');
     }
 }

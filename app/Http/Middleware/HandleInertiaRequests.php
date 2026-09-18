@@ -37,20 +37,25 @@ class HandleInertiaRequests extends Middleware
     {
         $cart = session()->get('cart', []);
         
-        $cartTotal = array_reduce($cart, function ($carry, $item) {
-            return $carry + ($item['precio'] * $item['cantidad']);
-        }, 0);
-
-        $cartCount = array_reduce($cart, function ($carry, $item) {
-            return $carry + $item['cantidad'];
-        }, 0);
+        $cartTotal = 0;
+        $cartCount = 0;
+        foreach ($cart as $item) {
+            $cartTotal += $item['precio'] * $item['cantidad'];
+            $cartCount += $item['cantidad'];
+        }
 
         // Usa el guard 'admin' si estamos en una ruta de admin, caso contrario el normal
         $user = $request->is('admin*') ? auth('admin')->user() : $request->user();
+        
+        $permisos = [];
         if ($user) {
             $user->loadMissing('roles');
+            $permisos = \Illuminate\Support\Facades\Cache::remember(
+                'user_permissions_' . $user->id,
+                3600, // 1 hour
+                fn () => $user->getAllPermisos()->toArray()
+            );
         }
-        $permisos = $user ? $user->getAllPermisos() : [];
 
         // Detección de dispositivo server-side (User-Agent nativo — sin dependencias)
         $ua = strtolower($request->header('User-Agent', ''));

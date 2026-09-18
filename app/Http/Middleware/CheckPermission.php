@@ -16,15 +16,10 @@ class CheckPermission
     public function handle(Request $request, Closure $next, $permiso)
     {
         if (!auth()->check()) {
-            return redirect('/login');
+            return $request->expectsJson() 
+                ? response()->json(['error' => 'No autorizado'], 401)
+                : redirect('/login');
         }
-
-        \Log::info('CheckPermission check', [
-            'user_id' => auth()->id(),
-            'user_email' => auth()->user()->email,
-            'permiso' => $permiso,
-            'tiene_permiso' => auth()->user()->tienePermiso($permiso)
-        ]);
 
         if (!auth()->user()->tienePermiso($permiso)) {
             abort(403, 'NO TIENES PERMISO PARA ACCEDER A ESTA SECCIÓN.');

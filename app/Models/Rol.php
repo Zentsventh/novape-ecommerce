@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -11,12 +13,12 @@ class Rol extends Model
 
     protected $fillable = ['nombre', 'descripcion'];
 
-    public function usuarios()
+    public function usuarios(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Usuario::class, 'usuario_rol', 'rol_id', 'usuario_id');
     }
 
-    public function permisos()
+    public function permisos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Permiso::class, 'rol_permiso', 'rol_id', 'permiso_id');
     }

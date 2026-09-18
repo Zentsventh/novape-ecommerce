@@ -1,67 +1,44 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Marketing\StoreCouponRequest;
+use App\Http\Requests\Admin\Marketing\UpdateCouponRequest;
+use App\Services\Admin\Marketing\MarketingService;
 use App\Models\Cupon;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CuponController extends Controller
 {
+    public function __construct(
+        private readonly MarketingService $marketingService
+    ) {}
+
     public function index()
     {
-        $cupones = Cupon::orderBy('id', 'desc')->get();
         return Inertia::render('Admin/Cupones/Index', [
-            'cupones' => $cupones
+            'cupones' => $this->marketingService->getCoupons()
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreCouponRequest $request)
     {
-        $validated = $request->validate([
-            'codigo' => 'required|string|unique:cupones,codigo',
-            'tipo' => 'required|in:porcentaje,fijo',
-            'valor' => 'required|numeric|min:0',
-            'monto_minimo' => 'nullable|numeric|min:0',
-            'fecha_inicio' => 'nullable|date',
-            'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-            'limite_usos' => 'nullable|integer|min:1',
-            'activo' => 'boolean',
-            'unico_por_cliente' => 'boolean',
-        ]);
-
-        Cupon::create($validated);
-
+        $this->marketingService->createCoupon($request->validated());
         return redirect()->back()->with('success', 'Cupón creado correctamente.');
     }
 
-    public function update(Request $request, $id) 
+    public function update(UpdateCouponRequest $request, int $id) 
     {
-        $cupon = Cupon::findOrFail($id);
-
-        $validated = $request->validate([
-            'codigo' => 'required|string|unique:cupones,codigo,' . $cupon->id,
-            'tipo' => 'required|in:porcentaje,fijo',
-            'valor' => 'required|numeric|min:0',
-            'monto_minimo' => 'nullable|numeric|min:0',
-            'fecha_inicio' => 'nullable|date',
-            'fecha_fin' => 'nullable|date|after_or_equal:fecha_inicio',
-            'limite_usos' => 'nullable|integer|min:1',
-            'activo' => 'boolean',
-            'unico_por_cliente' => 'boolean',
-        ]);
-
-        $cupon->update($validated);
-
+        $this->marketingService->updateCoupon(Cupon::findOrFail($id), $request->validated());
         return redirect()->back()->with('success', 'Cupón actualizado correctamente.');
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $cupon = Cupon::findOrFail($id);
-        $cupon->delete();
-
+        $this->marketingService->deleteCoupon(Cupon::findOrFail($id));
         return redirect()->back()->with('success', 'Cupón eliminado correctamente.');
     }
 }

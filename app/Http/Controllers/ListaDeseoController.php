@@ -1,136 +1,71 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Profile\SyncWishlistsRequest;
+use App\Http\Requests\Profile\ToggleWishlistRequest;
+use App\Http\Requests\Profile\StoreWishlistRequest;
+use App\Services\Profile\WishlistService;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 class ListaDeseoController extends Controller
 {
-    public function storeLista(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'es_publica' => 'boolean'
-        ]);
+    public function __construct(
+        private readonly WishlistService $wishlistService
+    ) {}
 
-        $usuario = \Auth::user();
-        $usuario->listas()->create([
-            'nombre' => $request->nombre,
-            'es_publica' => $request->es_publica ?? false
-        ]);
+    public function storeLista(StoreWishlistRequest $request): RedirectResponse
+    {
+
+        $this->wishlistService->createList(
+            \Auth::user(),
+            $request->input('nombre'),
+            (bool) $request->input('es_publica', false)
+        );
 
         return back()->with('success', 'Lista creada exitosamente.');
     }
 
-    public function destroyLista($id)
+    public function destroyLista(int $id): RedirectResponse
     {
-        $usuario = \Auth::user();
-        $lista = $usuario->listas()->findOrFail($id);
-        $lista->delete();
-
+        $this->wishlistService->deleteList(\Auth::user(), $id);
         return back()->with('success', 'Lista eliminada.');
     }
 
-    public function storeListaItem(Request $request)
-    {
-        $request->validate([
-            'lista_id' => 'required|exists:usuario_listas,id',
-            'producto_id' => 'required|exists:productos,id',
-        ]);
-
-        $usuario = \Auth::user();
-        $lista = $usuario->listas()->findOrFail($request->lista_id);
-        
-        $lista->items()->firstOrCreate([
-            'producto_id' => $request->producto_id
-        ]);
-
-        return back()->with('success', 'Producto agregado a la lista.');
-    }
-
-    public function destroyListaItem($id)
+    public function getLists(): JsonResponse
     {
         $usuario = \Auth::user();
-        
-        $item = \App\Models\UsuarioListaItem::whereHas('lista', function($q) use ($usuario) {
-            $q->where('usuario_id', $usuario->id);
-        })->findOrFail($id);
+        if (!$usuario) {
+            return response()->json([]);
+        }
 
-        $item->delete();
-
-        return back()->with('success', 'Producto eliminado de la lista.');
-    }
-
-    public function getLists()
-    {
-        $usuario = \Auth::user();
-        if (!$usuario) return response()->json([]);
-
-        $listas = $usuario->listas()->with('items')->get();
+        $listas = $this->wishlistService->getLists($usuario);
         return response()->json($listas);
     }
 
-    public function syncWishlists(Request $request)
+    public function syncWishlists(SyncWishlistsRequest $request): RedirectResponse
     {
-        $request->validate([
-            'producto_id' => 'required|exists:producto,id',
-            'lista_ids' => 'array',
-            'lista_ids.*' => 'exists:usuario_listas,id'
-        ]);
-
-        $usuario = \Auth::user();
-        $producto_id = $request->producto_id;
-        $nuevas_listas_ids = $request->lista_ids ?? [];
-
-        // Obtener todas las listas del usuario
-        $mis_listas = $usuario->listas()->pluck('id')->toArray();
-
-        // Eliminar el producto de las listas no seleccionadas, y agregarlo a las seleccionadas
-        foreach ($mis_listas as $lista_id) {
-            $lista = $usuario->listas()->find($lista_id);
-            if (!$lista) continue;
-
-            $item = $lista->items()->where('producto_id', $producto_id)->first();
-            $debe_estar = in_array($lista_id, $nuevas_listas_ids);
-
-            if ($debe_estar && !$item) {
-                $lista->items()->create(['producto_id' => $producto_id]);
-            } elseif (!$debe_estar && $item) {
-                $item->delete();
-            }
-        }
+        $this->wishlistService->syncWishlists(
+            \Auth::user(),
+            (int) $request->input('producto_id'),
+            $request->input('lista_ids', [])
+        );
 
         return back()->with('success', 'Listas guardadas exitosamente.');
     }
 
-    public function toggleWishlist(Request $request)
+    public function toggleWishlist(ToggleWishlistRequest $request): RedirectResponse
     {
-        $request->validate([
-            'producto_id' => 'required|exists:producto,id',
-            'lista_id' => 'nullable|exists:usuario_listas,id'
-        ]);
-        $usuario = \Auth::user();
-        
-        $lista = null;
-        if ($request->lista_id) {
-            $lista = $usuario->listas()->findOrFail($request->lista_id);
-        } else {
-            $lista = $usuario->listas()->first();
-            if (!$lista) {
-                $lista = $usuario->listas()->create([
-                    'nombre' => 'Mis Favoritos',
-                    'es_publica' => false
-                ]);
-            }
-        }
-        
-        $item = $lista->items()->where('producto_id', $request->producto_id)->first();
-        if ($item) {
-            $item->delete();
-            return back()->with('success', 'Producto removido de tus listas.');
-        } else {
-            $lista->items()->create(['producto_id' => $request->producto_id]);
-            return back()->with('success', 'Producto agregado a tu lista.');
-        }
+        $message = $this->wishlistService->toggleWishlist(
+            \Auth::user(),
+            (int) $request->input('producto_id'),
+            $request->input('lista_id') ? (int) $request->input('lista_id') : null
+        );
+
+        return back()->with('success', $message);
     }
 }

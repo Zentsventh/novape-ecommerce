@@ -1,64 +1,38 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\Producto;
+use App\Services\Catalog\CompareService;
 use App\Models\ConfiguracionSitio;
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class CompareController extends Controller
 {
-    public function index()
+    public function __construct(
+        private readonly CompareService $compareService
+    ) {}
+
+    public function index(): Response
     {
         $compareIds = session('compare', []);
-
-        $productos = collect();
-        if (count($compareIds) > 0) {
-            $productos = Producto::whereIn('id', $compareIds)
-                ->with(['marca', 'imagenes', 'variantes', 'productoEspecificaciones.especificacion'])
-                ->get()
-                ->map(function ($prod) {
-                    $variante = $prod->variantes->first();
-                    return [
-                        'id' => $prod->id,
-                        'nombre' => $prod->nombre,
-                        'marca' => $prod->marca ? $prod->marca->nombre : 'Genérico',
-                        'precio' => $variante ? (float) $variante->precio : 0,
-                        'imagen' => $prod->imagenes->first() ? $prod->imagenes->first()->url : null,
-                        'descripcion' => $prod->descripcion,
-                        'especificaciones' => $prod->productoEspecificaciones->map(function ($pe) {
-                            return [
-                                'nombre' => $pe->especificacion->nombre,
-                                'valor' => $pe->valor
-                            ];
-                        })->toArray()
-                    ];
-                });
-        }
-
-        // Obtener todas las especificaciones únicas entre los productos para armar la tabla
-        $todasEspecificaciones = [];
-        foreach ($productos as $prod) {
-            foreach ($prod['especificaciones'] as $esp) {
-                if (!in_array($esp['nombre'], $todasEspecificaciones)) {
-                    $todasEspecificaciones[] = $esp['nombre'];
-                }
-            }
-        }
-
-        $logoUrl = ConfiguracionSitio::obtener('logo_url');
-
+        
+        $compareData = $this->compareService->getCompareData($compareIds);
+        
         return Inertia::render('Comparador', [
-            'productos' => $productos,
-            'especificacionesUnicas' => $todasEspecificaciones,
-            'logoUrl' => $logoUrl
+            'productos' => $compareData['productos'],
+            'especificacionesUnicas' => $compareData['especificacionesUnicas'],
+            'logoUrl' => ConfiguracionSitio::obtener('logo_url')
         ]);
     }
 
-    public function add(Request $request)
+    public function add(Request $request): RedirectResponse
     {
-        $id = $request->input('producto_id');
+        $id = (int) $request->input('producto_id');
         $compare = session('compare', []);
 
         if (count($compare) >= 4) {
@@ -74,9 +48,9 @@ class CompareController extends Controller
         return back()->with('success', 'El producto ya está en el comparador.');
     }
 
-    public function remove(Request $request)
+    public function remove(Request $request): RedirectResponse
     {
-        $id = $request->input('producto_id');
+        $id = (int) $request->input('producto_id');
         $compare = session('compare', []);
         
         if (($key = array_search($id, $compare)) !== false) {
@@ -87,7 +61,7 @@ class CompareController extends Controller
         return back()->with('success', 'Producto removido del comparador.');
     }
 
-    public function clear()
+    public function clear(): RedirectResponse
     {
         session()->forget('compare');
         return back()->with('success', 'Comparador limpiado.');

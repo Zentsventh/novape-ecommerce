@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,12 +21,12 @@ class CajaMovimiento extends Model
         'concepto'
     ];
 
-    public function cajaSesion()
+    public function cajaSesion(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(CajaSesion::class, 'caja_sesion_id');
     }
 
-    public function usuario()
+    public function usuario(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Usuario::class, 'usuario_id');
     }

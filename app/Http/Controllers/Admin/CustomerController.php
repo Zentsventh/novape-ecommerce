@@ -1,184 +1,102 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Users\StoreCustomerRequest;
+use App\Http\Requests\Admin\Users\UpdateCustomerRequest;
+use App\Http\Requests\Admin\Users\StoreCustomerNoteRequest;
+use App\Services\Admin\Users\UserManagementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Usuario;
+use App\Models\Rol;
 
 class CustomerController extends Controller
 {
+    public function __construct(
+        private readonly UserManagementService $userService
+    ) {}
+
     public function index(Request $request)
     {
-        $query = Usuario::query()->with('roles');
-
-        if ($request->filled('buscar')) {
-            $buscar = $request->buscar;
-            $query->where(function ($q) use ($buscar) {
-                $q->where('nombres', 'like', "%{$buscar}%")
-                  ->orWhere('apellidos', 'like', "%{$buscar}%")
-                  ->orWhere('email', 'like', "%{$buscar}%")
-                  ->orWhere('dni', 'like', "%{$buscar}%");
-            });
-        }
-
-        // Mostrar usuarios que tienen el rol 'cliente' o no tienen ningún rol (clientes por defecto)
-        $query->where(function ($q) {
-            $q->whereHas('roles', function ($q2) {
-                $q2->where('nombre', 'cliente');
-            })->orWhereDoesntHave('roles');
-        });
-
-        $clientes = $query->withCount('pedidos')
-            ->orderBy('id', 'desc')
-            ->paginate(12);
+        $filtros = $request->only('buscar');
+        $clientes = $this->userService->getCustomers($filtros);
 
         return Inertia::render('Admin/Clientes/Index', [
             'clientes' => $clientes,
-            'filtros' => $request->only('buscar'),
+            'filtros' => $filtros,
         ]);
     }
 
     public function create()
     {
-        $roles = \App\Models\Rol::all();
         return Inertia::render('Admin/Clientes/Create', [
-            'roles' => $roles
+            'roles' => Rol::all()
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request)
     {
-        $validated = $request->validate([
-            'nombres' => 'required|string|max:100',
-            'apellidos' => 'required|string|max:100',
-            'email' => 'required|email|unique:usuario,email',
-            'password' => 'required|string|min:6',
-            'dni' => 'nullable|string|max:20|unique:usuario,dni',
-            'telefono' => 'nullable|string|max:30',
-        ], [
-            'dni.unique' => 'Este DNI ya está registrado en el sistema.',
-            'email.unique' => 'Este correo electrónico ya está registrado.'
-        ]);
-
-        $usuario = Usuario::create([
-            'nombres' => $validated['nombres'],
-            'apellidos' => $validated['apellidos'],
-            'email' => $validated['email'],
-            'password_hash' => \Illuminate\Support\Facades\Hash::make($validated['password']),
-            'dni' => $validated['dni'] ?? null,
-            'telefono' => $validated['telefono'] ?? null,
-            'estado' => 'activo'
-        ]);
-
-        \App\Models\ActividadLog::log('Creó un nuevo cliente', 'usuario', $usuario->id, $usuario->toArray());
-
+        $this->userService->createUser($request->validated(), false);
         return redirect()->route('admin.clientes')->with('success', 'Usuario creado correctamente.');
     }
 
-    public function edit($id)
+    public function edit(int $id)
     {
-        $usuario = Usuario::with('roles')->findOrFail($id);
-        $roles = \App\Models\Rol::all();
-
         return Inertia::render('Admin/Clientes/Edit', [
-            'cliente' => $usuario,
-            'roles' => $roles
+            'cliente' => Usuario::with('roles')->findOrFail($id),
+            'roles' => Rol::all()
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCustomerRequest $request, int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-
-        $validated = $request->validate([
-            'nombres' => 'required|string|max:100',
-            'apellidos' => 'required|string|max:100',
-            'email' => 'required|email|unique:usuario,email,' . $id,
-            'dni' => 'nullable|string|max:20|unique:usuario,dni,' . $id,
-            'telefono' => 'nullable|string|max:30',
-        ], [
-            'dni.unique' => 'Este DNI ya está registrado en el sistema.',
-            'email.unique' => 'Este correo electrónico ya está registrado.'
-        ]);
-
-        $usuario->update([
-            'nombres' => $validated['nombres'],
-            'apellidos' => $validated['apellidos'],
-            'email' => $validated['email'],
-            'dni' => $validated['dni'] ?? null,
-            'telefono' => $validated['telefono'] ?? null,
-        ]);
-
-        \App\Models\ActividadLog::log('Actualizó un cliente', 'usuario', $usuario->id, $usuario->toArray());
-
+        $this->userService->updateUser(Usuario::findOrFail($id), $request->validated(), false);
         return redirect()->route('admin.clientes')->with('success', 'Usuario actualizado correctamente.');
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-
-        if ($usuario->id === auth('admin')->id()) {
-            return redirect()->back()->with('error', 'No puedes eliminar tu propia cuenta.');
+        try {
+            $this->userService->deleteUser(Usuario::findOrFail($id), auth('admin')->id() ?? 0);
+            return redirect()->route('admin.clientes')->with('success', 'Usuario movido a la papelera.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $usuario->delete(); // Soft delete
-        
-        \App\Models\ActividadLog::log('Eliminó un usuario (Soft Delete)', 'usuario', $usuario->id);
-
-        return redirect()->route('admin.clientes')->with('success', 'Usuario movido a la papelera.');
     }
 
-    public function toggleBloqueo($id)
+    public function toggleBloqueo(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-        
-        if ($usuario->id === auth('admin')->id()) {
-            return redirect()->back()->with('error', 'No puedes bloquear tu propia cuenta.');
+        try {
+            $this->userService->toggleBlockStatus(Usuario::findOrFail($id), auth('admin')->id() ?? 0);
+            return redirect()->back()->with('success', 'Estado de cuenta actualizado correctamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $usuario->estado = $usuario->estado === 'bloqueado' ? 'activo' : 'bloqueado';
-        $usuario->save();
-
-        $accion = $usuario->estado === 'bloqueado' ? 'bloqueada' : 'desbloqueada';
-        \App\Models\ActividadLog::log("Cuenta de usuario $accion", 'usuario', $usuario->id);
-
-        return redirect()->back()->with('success', "Cuenta de usuario $accion correctamente.");
     }
 
-    public function resetPassword($id)
+    public function resetPassword(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-        
-        $newPassword = 'Novape' . date('Y') . '!';
-        $usuario->password_hash = \Illuminate\Support\Facades\Hash::make($newPassword);
-        $usuario->save();
-
-        \App\Models\ActividadLog::log('Restableció contraseña de usuario', 'usuario', $usuario->id);
-
+        $newPassword = $this->userService->resetPassword(Usuario::findOrFail($id));
         return redirect()->back()->with('success', "Contraseña restablecida exitosamente. Nueva contraseña: {$newPassword}");
     }
 
-    public function show($id)
+    public function show(int $id)
     {
-        // Cargar el cliente con sus notas (sin limit en eager load para evitar problemas con MySQL ONLY_FULL_GROUP_BY)
         $cliente = Usuario::with(['notas' => function ($q) {
             $q->with('autor')->orderBy('created_at', 'desc');
         }])->findOrFail($id);
 
-        // Cargar pedidos por separado para evitar window function issues con MySQL
         $pedidos = $cliente->pedidos()->orderBy('id', 'desc')->limit(10)->get();
         $cliente->setRelation('pedidos', $pedidos);
 
-        $totalCompras = $cliente->pedidos()->where('estado', 'completado')->sum('total');
-        $totalPedidos = $cliente->pedidos()->count();
-
         return Inertia::render('Admin/Clientes/Show', [
             'cliente' => $cliente,
-            'totalCompras' => (float) $totalCompras,
-            'totalPedidos' => $totalPedidos,
+            'totalCompras' => (float) $cliente->pedidos()->where('estado', 'completado')->sum('total'),
+            'totalPedidos' => $cliente->pedidos()->count(),
         ]);
     }
 
@@ -211,30 +129,20 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function storeNota(Request $request, $id)
+    public function storeNota(StoreCustomerNoteRequest $request, int $id)
     {
-        $request->validate([
-            'nota' => 'required|string|max:1000'
-        ]);
-
-        $cliente = Usuario::findOrFail($id);
-        
         \App\Models\ClienteNota::create([
-            'cliente_id' => $cliente->id,
+            'cliente_id' => $id,
             'autor_id' => auth('admin')->id(),
             'nota' => $request->nota,
         ]);
-
-        \App\Models\ActividadLog::log('Añadió una nota al cliente', 'usuario', $cliente->id);
-
+        \App\Models\ActividadLog::log('Añadió una nota al cliente', 'usuario', $id);
         return redirect()->back()->with('success', 'Nota añadida correctamente.');
     }
 
-    public function destroyNota($id, $notaId)
+    public function destroyNota(int $id, int $notaId)
     {
-        $nota = \App\Models\ClienteNota::where('cliente_id', $id)->findOrFail($notaId);
-        $nota->delete();
-
+        \App\Models\ClienteNota::where('cliente_id', $id)->findOrFail($notaId)->delete();
         return redirect()->back()->with('success', 'Nota eliminada correctamente.');
     }
 }

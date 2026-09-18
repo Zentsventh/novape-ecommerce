@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,12 +18,12 @@ class UsuarioListaItem extends Model
         'producto_id',
     ];
 
-    public function lista()
+    public function lista(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(UsuarioLista::class, 'lista_id');
     }
 
-    public function producto()
+    public function producto(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Producto::class);
     }

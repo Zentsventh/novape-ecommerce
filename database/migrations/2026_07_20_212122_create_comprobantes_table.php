@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('comprobantes', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('pedido_id')->nullable();
+            $table->bigInteger('pedido_id')->nullable();
             $table->string('tipo', 20)->default('boleta'); // boleta, factura, nota_venta
             $table->string('serie', 10)->nullable();
             $table->string('numero', 20)->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->timestamp('emitido_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('pedido_id')->references('id')->on('pedidos')->onDelete('set null');
+            $table->foreign('pedido_id')->references('id')->on('pedido')->onDelete('set null');
         });
     }
 

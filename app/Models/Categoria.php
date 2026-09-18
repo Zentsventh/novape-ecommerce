@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -25,22 +27,22 @@ class Categoria extends Model
 
     protected $fillable = ['nombre', 'descripcion', 'categoria_padre_id'];
 
-    public function padre()
+    public function padre(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Categoria::class, 'categoria_padre_id');
     }
 
-    public function hijos()
+    public function hijos(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Categoria::class, 'categoria_padre_id');
     }
 
-    public function subcategorias()
+    public function subcategorias(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Categoria::class, 'categoria_padre_id');
     }
 
-    public function productos()
+    public function productos(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Producto::class, 'producto_categoria', 'categoria_id', 'producto_id');
     }

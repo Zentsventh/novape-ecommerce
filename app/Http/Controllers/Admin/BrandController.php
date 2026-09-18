@@ -1,22 +1,26 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Admin\Catalog\StoreBrandRequest;
+use App\Http\Requests\Admin\Catalog\UpdateBrandRequest;
+use App\Services\Admin\Catalog\CatalogManagementService;
 use Inertia\Inertia;
 use App\Models\Marca;
 
 class BrandController extends Controller
 {
+    public function __construct(
+        private readonly CatalogManagementService $catalogService
+    ) {}
+
     public function index()
     {
-        $marcas = Marca::withCount('productos')
-            ->orderBy('id', 'desc')
-            ->get();
-
         return Inertia::render('Admin/Marcas/Index', [
-            'marcas' => $marcas
+            'marcas' => $this->catalogService->getBrands()
         ]);
     }
 
@@ -25,42 +29,28 @@ class BrandController extends Controller
         return Inertia::render('Admin/Marcas/Form');
     }
 
-    public function store(Request $request)
+    public function store(StoreBrandRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:100|unique:marca,nombre',
-        ]);
-
-        Marca::create($validated);
-
+        $this->catalogService->createBrand($request->validated());
         return redirect()->route('admin.marcas')->with('success', 'Marca creada exitosamente.');
     }
 
-    public function edit($id)
+    public function edit(int $id)
     {
-        $marca = Marca::findOrFail($id);
         return Inertia::render('Admin/Marcas/Form', [
-            'marca' => $marca
+            'marca' => Marca::findOrFail($id)
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateBrandRequest $request, int $id)
     {
-        $marca = Marca::findOrFail($id);
-
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:100|unique:marca,nombre,' . $id,
-        ]);
-
-        $marca->update($validated);
-
+        $this->catalogService->updateBrand(Marca::findOrFail($id), $request->validated());
         return redirect()->route('admin.marcas')->with('success', 'Marca actualizada exitosamente.');
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $marca = Marca::findOrFail($id);
-        $marca->delete();
+        $this->catalogService->deleteBrand(Marca::findOrFail($id));
         return redirect()->route('admin.marcas')->with('success', 'Marca eliminada exitosamente.');
     }
 }

@@ -1,10 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 
 class Usuario extends Authenticatable
 {
@@ -13,88 +19,94 @@ class Usuario extends Authenticatable
     protected $table = 'usuario';
 
     protected $fillable = [
-        'nombres', 'apellidos', 'tipo_documento', 'dni', 'email', 'telefono', 'password_hash', 'estado',
-        'google_id', 'fecha_nacimiento', 'has_set_password'
+        'nombres', 'apellidos', 'tipo_documento', 'dni', 'email', 'telefono', 
+        'password_hash', 'estado', 'google_id', 'fecha_nacimiento', 'has_set_password'
     ];
 
-    /**
-     * Laravel usa 'password' por defecto para auth.
-     * Nuestro campo se llama 'password_hash', lo mapeamos.
-     */
-    public function getAuthPassword()
+    protected $casts = [
+        'has_set_password' => 'boolean',
+        'fecha_nacimiento' => 'date',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
+
+    protected $hidden = [
+        'password_hash',
+        'google_id',
+    ];
+
+    public function getAuthPassword(): string
     {
         return $this->password_hash;
     }
 
-    public function getAuthPasswordName()
+    public function getAuthPasswordName(): string
     {
         return 'password_hash';
     }
 
-    public function roles()
+    public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Rol::class, 'usuario_rol', 'usuario_id', 'rol_id');
     }
 
-    public function pedidos()
+    public function pedidos(): HasMany
     {
         return $this->hasMany(Pedido::class, 'usuario_id');
     }
 
-    public function notas()
+    public function notas(): HasMany
     {
         return $this->hasMany(ClienteNota::class, 'cliente_id');
     }
 
-    public function direcciones()
+    public function direcciones(): HasMany
     {
         return $this->hasMany(DireccionUsuario::class, 'usuario_id');
     }
 
-    public function carrito()
+    public function carrito(): HasOne
     {
         return $this->hasOne(Carrito::class, 'usuario_id');
     }
 
-    public function tarjetas()
+    public function tarjetas(): HasMany
     {
         return $this->hasMany(UsuarioTarjeta::class, 'usuario_id');
     }
 
-    public function datosReembolso()
+    public function datosReembolso(): HasMany
     {
         return $this->hasMany(UsuarioDatosReembolso::class, 'usuario_id');
     }
 
-    public function listas()
+    public function listas(): HasMany
     {
         return $this->hasMany(UsuarioLista::class, 'usuario_id');
     }
 
-    public function getNombreCompletoAttribute()
+    public function getNombreCompletoAttribute(): string
     {
         return $this->nombres . ' ' . $this->apellidos;
     }
 
-    public function esAdmin()
+    public function esAdmin(): bool
     {
         return $this->roles()->where('nombre', 'admin')->exists();
     }
 
-    public function esCliente()
+    public function esCliente(): bool
     {
         return $this->roles()->where('nombre', 'cliente')->exists();
     }
 
-    public function tieneRol($nombreRol)
+    public function tieneRol(string $nombreRol): bool
     {
         return $this->roles()->where('nombre', $nombreRol)->exists();
     }
 
-    /**
-     * Devuelve una colección con todos los nombres de los permisos que tiene este usuario.
-     */
-    public function getAllPermisos()
+    public function getAllPermisos(): Collection
     {
         return $this->roles()->with('permisos')->get()
             ->pluck('permisos')
@@ -104,12 +116,8 @@ class Usuario extends Authenticatable
             ->values();
     }
 
-    /**
-     * Verifica si el usuario tiene un permiso específico o si es admin.
-     */
-    public function tienePermiso($permiso)
+    public function tienePermiso(string $permiso): bool
     {
-        // Si es admin tiene acceso a todo
         if ($this->esAdmin()) {
             return true;
         }

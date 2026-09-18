@@ -1,17 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Session;
-use App\Mail\VerificarCelularMail;
 use App\Http\Requests\UpdateProfileRequest;
+use App\Http\Requests\Profile\RequestPhoneOtpRequest;
+use App\Http\Requests\Profile\VerifyPhoneOtpRequest;
+use App\Http\Requests\Profile\UpdatePasswordRequest;
+use App\Http\Requests\Profile\StoreDireccionRequest;
+use App\Http\Requests\Profile\StoreTarjetaRequest;
+use App\Http\Requests\Profile\DeleteAccountRequest;
+use App\Services\User\UserProfileService;
 
 class ProfileController extends Controller
 {
+    public function __construct(
+        private readonly UserProfileService $profileService
+    ) {}
+
     public function index(Request $request)
     {
         $usuario = Auth::user();
@@ -65,189 +75,74 @@ class ProfileController extends Controller
 
     public function update(UpdateProfileRequest $request)
     {
-        $usuario = Auth::user();
-        
-        $usuario->update([
-            'nombres' => $request->nombres,
-            'apellidos' => $request->apellidos,
-            'dni' => $request->dni,
-            // El celular se actualiza por OTP, no por este método general
-        ]);
-
+        $this->profileService->updateProfile(Auth::user(), $request->validated());
         return back()->with('success', 'Perfil actualizado exitosamente.');
     }
 
-    public function requestPhoneUpdateOtp(Request $request)
+    public function requestPhoneUpdateOtp(RequestPhoneOtpRequest $request)
     {
-        $request->validate([
-            'telefono' => 'required|string|min:9|max:15'
-        ]);
 
-        $usuario = Auth::user();
-        
-        // Generar código de 6 dígitos
-        $codigo = (string) random_int(100000, 999999);
-        
-        // Guardar en sesión por 10 minutos
-        Session::put('phone_update_otp', $codigo);
-        Session::put('phone_update_new_number', $request->telefono);
-        Session::put('phone_update_expires_at', now()->addMinutes(10));
-
-        // Enviar correo
-        Mail::to($usuario->email)->send(new VerificarCelularMail($usuario, $codigo));
-
+        $this->profileService->requestPhoneOtp(Auth::user(), $request->telefono);
         return back()->with('success', 'Código enviado a tu correo.');
     }
 
-    public function verifyPhoneUpdateOtp(Request $request)
+    public function verifyPhoneUpdateOtp(VerifyPhoneOtpRequest $request)
     {
-        $request->validate([
-            'codigo' => 'required|string|size:6'
-        ]);
 
-        $codigoGuardado = Session::get('phone_update_otp');
-        $expiraEn = Session::get('phone_update_expires_at');
-        $nuevoCelular = Session::get('phone_update_new_number');
-
-        if (!$codigoGuardado || !$expiraEn || now()->greaterThan($expiraEn)) {
-            return back()->withErrors(['codigo' => 'El código ha expirado o no es válido. Solicita uno nuevo.']);
+        try {
+            $this->profileService->verifyPhoneOtp(Auth::user(), $request->codigo);
+            return back()->with('success', 'Celular actualizado exitosamente.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['codigo' => $e->getMessage()]);
         }
-
-        if ($request->codigo !== $codigoGuardado) {
-            return back()->withErrors(['codigo' => 'El código ingresado es incorrecto.']);
-        }
-
-        // Todo correcto, actualizar celular
-        $usuario = Auth::user();
-        $usuario->update(['telefono' => $nuevoCelular]);
-
-        // Limpiar sesión
-        Session::forget(['phone_update_otp', 'phone_update_new_number', 'phone_update_expires_at']);
-
-        return back()->with('success', 'Celular actualizado exitosamente.');
     }
 
-    public function updatePassword(Request $request)
+    public function updatePassword(UpdatePasswordRequest $request)
     {
         $usuario = Auth::user();
 
-        $rules = [
-            'password' => [
-                'required',
-                'min:8',
-                'regex:/[a-z]/',      // Al menos una minúscula
-                'regex:/[A-Z]/',      // Al menos una mayúscula
-                'regex:/[0-9]/',      // Al menos un número
-                'regex:/[@$!%*#?&]/', // Al menos un símbolo
-                'confirmed'
-            ],
-        ];
-
-        if ($usuario->has_set_password) {
-            $rules['current_password'] = 'required';
+        try {
+            $this->profileService->updatePassword($usuario, $request->password, $request->current_password);
+            return back()->with('success', 'Tu contraseña se ha actualizado correctamente.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['current_password' => $e->getMessage()]);
         }
-
-        $request->validate($rules, [
-            'password.regex' => 'La contraseña debe contener al menos una mayúscula, una minúscula, un número y un símbolo especial (@$!%*#?&).'
-        ]);
-
-        if ($usuario->has_set_password && ! \Hash::check($request->current_password, $usuario->password_hash)) {
-            return back()->withErrors(['current_password' => 'La contraseña actual no es correcta.']);
-        }
-
-        $usuario->update([
-            'password_hash' => bcrypt($request->password),
-            'has_set_password' => true,
-        ]);
-
-        return back()->with('success', 'Tu contraseña se ha actualizado correctamente.');
     }
 
-    public function storeDireccion(Request $request)
+    public function storeDireccion(StoreDireccionRequest $request)
     {
-        $usuario = Auth::user();
 
-        $request->validate([
-            'direccion' => 'required',
-            'referencia' => 'nullable',
-            'departamento' => 'required',
-            'provincia' => 'required',
-            'distrito' => 'required',
-            'codigo_postal' => 'nullable',
-            'principal' => 'boolean|nullable',
-        ]);
-
-        $data = $request->all();
-        $isPrincipal = $request->input('principal', false);
-
-        if ($isPrincipal) {
-            $usuario->direcciones()->update(['principal' => false]);
-        }
-
-        $usuario->direcciones()->create($data);
-
+        $this->profileService->addAddress(Auth::user(), $request->all(), (bool) $request->input('principal', false));
         return back()->with('success', 'Dirección agregada correctamente.');
     }
 
     public function setPrincipalDireccion($id)
     {
-        $usuario = Auth::user();
-        
-        $usuario->direcciones()->update(['principal' => false]);
-        
-        $direccion = $usuario->direcciones()->findOrFail($id);
-        $direccion->principal = true;
-        $direccion->save();
-
+        $this->profileService->setPrincipalAddress(Auth::user(), (int) $id);
         return back()->with('success', 'Dirección establecida como principal.');
     }
 
     public function destroyDireccion($id)
     {
-        $usuario = Auth::user();
-        $direccion = $usuario->direcciones()->findOrFail($id);
-        $direccion->delete();
-
+        $this->profileService->deleteAddress(Auth::user(), (int) $id);
         return back()->with('success', 'Dirección eliminada.');
     }
 
-    public function storeTarjeta(Request $request)
+    public function storeTarjeta(StoreTarjetaRequest $request)
     {
-        $usuario = Auth::user();
-        $request->validate([
-            'numero_tarjeta' => 'required|string|size:16',
-            'fecha_vencimiento' => 'required|string',
-            'cvv' => 'required|string',
-            'nombre_titular' => 'required|string'
-        ]);
 
-        // Simulación: solo guardamos los últimos 4 dígitos y marca
-        $ultimos = substr($request->numero_tarjeta, -4);
-        // Lógica simple para marca
-        $marca = str_starts_with($request->numero_tarjeta, '4') ? 'Visa' : (str_starts_with($request->numero_tarjeta, '5') ? 'Mastercard' : 'Amex');
-        
-        $usuario->tarjetas()->create([
-            'ultimos_digitos' => $ultimos,
-            'marca' => $marca,
-            'principal' => $usuario->tarjetas()->count() === 0,
-            'token_simulado' => 'tok_' . uniqid(),
-        ]);
-
+        $this->profileService->addCard(Auth::user(), $request->all());
         return back()->with('success', 'Tarjeta agregada exitosamente (Simulación).');
     }
 
     public function destroyTarjeta($id)
     {
-        $usuario = Auth::user();
-        $tarjeta = $usuario->tarjetas()->findOrFail($id);
-        $tarjeta->delete();
-
+        $this->profileService->deleteCard(Auth::user(), (int) $id);
         return back()->with('success', 'Tarjeta eliminada.');
     }
 
     public function updateDatosReembolso(Request $request)
     {
-        $usuario = Auth::user();
         $validated = $request->validate([
             'tipo_documento' => 'required|string',
             'numero_documento' => 'required|string',
@@ -261,37 +156,25 @@ class ProfileController extends Controller
             'cci' => 'required|string',
         ]);
 
-        $datos = $usuario->datosReembolso()->first();
-        if ($datos) {
-            $datos->update($validated);
-        } else {
-            $usuario->datosReembolso()->create($validated);
-        }
-
+        $this->profileService->updateRefundData(Auth::user(), $validated);
         return back()->with('success', 'Datos de reembolso actualizados.');
     }
 
     public function destroySession($id)
     {
-        $usuario = Auth::user();
-        \DB::table('sessions')->where('id', $id)->where('user_id', $usuario->id)->delete();
+        $this->profileService->deleteSession(Auth::user(), (string) $id);
         return back()->with('success', 'Sesión cerrada exitosamente.');
     }
 
-    public function destroyAccount(Request $request)
+    public function destroyAccount(DeleteAccountRequest $request)
     {
-        $usuario = Auth::user();
-        $request->validate([
-            'password' => 'required'
-        ]);
 
-        if (! \Hash::check($request->password, $usuario->password_hash)) {
-            return back()->withErrors(['password' => 'La contraseña no es correcta.']);
+        try {
+            $this->profileService->deleteAccount(Auth::user(), $request->password);
+            Auth::logout();
+            return redirect('/')->with('success', 'Tu cuenta ha sido eliminada.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['password' => $e->getMessage()]);
         }
-
-        Auth::logout();
-        $usuario->delete(); // Soft delete
-
-        return redirect('/')->with('success', 'Tu cuenta ha sido eliminada.');
     }
 }

@@ -1,198 +1,98 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Users\StoreStaffRequest;
+use App\Http\Requests\Admin\Users\UpdateStaffRequest;
+use App\Services\Admin\Users\UserManagementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Usuario;
+use App\Models\Rol;
 
 class StaffController extends Controller
 {
+    public function __construct(
+        private readonly UserManagementService $userService
+    ) {}
+
     public function index(Request $request)
     {
-        \Log::info('StaffController index reached');
-        $query = Usuario::query()->with('roles');
-
-        if ($request->filled('buscar')) {
-            $buscar = $request->buscar;
-            $query->where(function ($q) use ($buscar) {
-                $q->where('nombres', 'like', "%{$buscar}%")
-                  ->orWhere('apellidos', 'like', "%{$buscar}%")
-                  ->orWhere('email', 'like', "%{$buscar}%")
-                  ->orWhere('dni', 'like', "%{$buscar}%");
-            });
-        }
-
-        // Solo mostrar usuarios que SÍ tienen algún rol que NO sea 'cliente' (es decir, trabajadores)
-        $query->whereHas('roles', function ($q) {
-            $q->where('nombre', '!=', 'cliente');
-        });
-
-        $clientes = $query->withCount('pedidos')
-            ->orderBy('id', 'desc')
-            ->paginate(12);
+        $filtros = $request->only('buscar');
+        $trabajadores = $this->userService->getStaff($filtros);
 
         return Inertia::render('Admin/Trabajadores/Index', [
-            'trabajadores' => $clientes,
-            'filtros' => $request->only('buscar'),
+            'trabajadores' => $trabajadores,
+            'filtros' => $filtros,
         ]);
     }
 
     public function create()
     {
-        $roles = \App\Models\Rol::all();
         return Inertia::render('Admin/Trabajadores/Create', [
-            'roles' => $roles
+            'roles' => Rol::all()
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreStaffRequest $request)
     {
-        $validated = $request->validate([
-            'nombres' => 'required|string|max:100',
-            'apellidos' => 'required|string|max:100',
-            'email' => 'required|email|unique:usuario,email',
-            'password' => 'required|string|min:6',
-            'roles' => 'required|array|min:1',
-            'roles.*' => 'exists:rol,id',
-            'dni' => 'nullable|string|max:20|unique:usuario,dni',
-            'telefono' => 'nullable|string|max:30',
-        ], [
-            'dni.unique' => 'Este DNI ya está registrado en el sistema.',
-            'email.unique' => 'Este correo electrónico ya está registrado.'
-        ]);
-
-        $usuario = Usuario::create([
-            'nombres' => $validated['nombres'],
-            'apellidos' => $validated['apellidos'],
-            'email' => $validated['email'],
-            'password_hash' => \Illuminate\Support\Facades\Hash::make($validated['password']),
-            'dni' => $validated['dni'] ?? null,
-            'telefono' => $validated['telefono'] ?? null,
-            'estado' => 'activo'
-        ]);
-
-        $usuario->roles()->attach($validated['roles']);
-
-        \App\Models\ActividadLog::log('Creó un nuevo usuario', 'usuario', $usuario->id, $usuario->toArray());
-
+        $this->userService->createUser($request->validated(), true);
         return redirect()->route('admin.trabajadores')->with('success', 'Trabajador creado correctamente.');
     }
 
-    public function edit($id)
+    public function edit(int $id)
     {
-        $usuario = Usuario::with('roles')->findOrFail($id);
-        $roles = \App\Models\Rol::all();
-
         return Inertia::render('Admin/Trabajadores/Edit', [
-            'trabajador' => $usuario,
-            'roles' => $roles
+            'trabajador' => Usuario::with('roles')->findOrFail($id),
+            'roles' => Rol::all()
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateStaffRequest $request, int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-
-        $validated = $request->validate([
-            'nombres' => 'required|string|max:100',
-            'apellidos' => 'required|string|max:100',
-            'email' => 'required|email|unique:usuario,email,' . $id,
-            'roles' => 'required|array|min:1',
-            'roles.*' => 'exists:rol,id',
-            'dni' => 'nullable|string|max:20|unique:usuario,dni,' . $id,
-            'telefono' => 'nullable|string|max:30',
-            'password' => 'nullable|string|min:6',
-        ], [
-            'dni.unique' => 'Este DNI ya está registrado en el sistema.',
-            'email.unique' => 'Este correo electrónico ya está registrado.',
-            'password.min' => 'La contraseña debe tener al menos 6 caracteres.'
-        ]);
-
-
-        $dataToUpdate = [
-            'nombres' => $validated['nombres'],
-            'apellidos' => $validated['apellidos'],
-            'email' => $validated['email'],
-            'dni' => $validated['dni'] ?? null,
-            'telefono' => $validated['telefono'] ?? null,
-        ];
-
-        if (!empty($validated['password'])) {
-            $dataToUpdate['password_hash'] = \Illuminate\Support\Facades\Hash::make($validated['password']);
-        }
-
-        $usuario->update($dataToUpdate);
-
-        $usuario->roles()->sync($validated['roles']);
-
-        \App\Models\ActividadLog::log('Actualizó un usuario', 'usuario', $usuario->id, $usuario->toArray());
-
+        $this->userService->updateUser(Usuario::findOrFail($id), $request->validated(), true);
         return redirect()->route('admin.trabajadores')->with('success', 'Trabajador actualizado correctamente.');
     }
 
-    public function destroy($id)
+    public function destroy(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-
-        if ($usuario->id === auth('admin')->id()) {
-            return redirect()->back()->with('error', 'No puedes eliminar tu propia cuenta.');
+        try {
+            $this->userService->deleteUser(Usuario::findOrFail($id), auth('admin')->id() ?? 0);
+            return redirect()->route('admin.trabajadores')->with('success', 'Trabajador movido a la papelera.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $usuario->delete(); // Soft delete
-        
-        \App\Models\ActividadLog::log('Eliminó un usuario (Soft Delete)', 'usuario', $usuario->id);
-
-        return redirect()->route('admin.trabajadores')->with('success', 'Trabajador movido a la papelera.');
     }
 
-    public function toggleBloqueo($id)
+    public function toggleBloqueo(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-        
-        if ($usuario->id === auth('admin')->id()) {
-            return redirect()->back()->with('error', 'No puedes bloquear tu propia cuenta.');
+        try {
+            $this->userService->toggleBlockStatus(Usuario::findOrFail($id), auth('admin')->id() ?? 0);
+            return redirect()->back()->with('success', 'Estado de cuenta actualizado correctamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
-
-        $usuario->estado = $usuario->estado === 'bloqueado' ? 'activo' : 'bloqueado';
-        $usuario->save();
-
-        $accion = $usuario->estado === 'bloqueado' ? 'bloqueada' : 'desbloqueada';
-        \App\Models\ActividadLog::log("Cuenta de usuario $accion", 'usuario', $usuario->id);
-
-        return redirect()->back()->with('success', "Cuenta de usuario $accion correctamente.");
     }
 
-    public function resetPassword($id)
+    public function resetPassword(int $id)
     {
-        $usuario = Usuario::findOrFail($id);
-        
-        $newPassword = 'Novape' . date('Y') . '!';
-        $usuario->password_hash = \Illuminate\Support\Facades\Hash::make($newPassword);
-        $usuario->save();
-
-        \App\Models\ActividadLog::log('Restableció contraseña de usuario', 'usuario', $usuario->id);
-
+        $newPassword = $this->userService->resetPassword(Usuario::findOrFail($id));
         return redirect()->back()->with('success', "Contraseña restablecida exitosamente. Nueva contraseña: {$newPassword}");
     }
 
-    public function show($id)
+    public function show(int $id)
     {
-        // Cargar el trabajador sin limit en eager load para evitar problemas con MySQL ONLY_FULL_GROUP_BY
-        $cliente = Usuario::with('roles')->findOrFail($id);
-
-        // Cargar pedidos por separado para evitar window function issues con MySQL
-        $pedidos = $cliente->pedidos()->orderBy('id', 'desc')->limit(10)->get();
-        $cliente->setRelation('pedidos', $pedidos);
-
-        $totalCompras = $cliente->pedidos()->where('estado', 'completado')->sum('total');
-        $totalPedidos = $cliente->pedidos()->count();
+        $trabajador = Usuario::with('roles')->findOrFail($id);
+        $pedidos = $trabajador->pedidos()->orderBy('id', 'desc')->limit(10)->get();
+        $trabajador->setRelation('pedidos', $pedidos);
 
         return Inertia::render('Admin/Trabajadores/Show', [
-            'trabajador' => $cliente,
-            'totalCompras' => (float) $totalCompras,
-            'totalPedidos' => $totalPedidos,
+            'trabajador' => $trabajador,
+            'totalCompras' => (float) $trabajador->pedidos()->where('estado', 'completado')->sum('total'),
+            'totalPedidos' => $trabajador->pedidos()->count(),
         ]);
     }
 

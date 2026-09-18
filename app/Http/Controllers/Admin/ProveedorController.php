@@ -1,33 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Warehouse\StoreSupplierRequest;
 use App\Models\Proveedor;
+use App\Services\Admin\Warehouse\SupplierService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ProveedorController extends Controller
 {
+    public function __construct(
+        private readonly SupplierService $supplierService
+    ) {}
+
     public function index(Request $request)
     {
-        $search = $request->query('search', '');
-        $sort = $request->query('sort', 'id');
-        $direction = $request->query('direction', 'desc');
-
-        $query = Proveedor::query();
-
-        if (!empty($search)) {
-            $query->where('nombre', 'like', "%{$search}%")
-                  ->orWhere('ruc', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-        }
-
-        $proveedores = $query->orderBy($sort, $direction)->paginate(10)->withQueryString();
+        $filters = $request->only(['search', 'sort', 'direction']);
+        $proveedores = $this->supplierService->getSuppliers($filters);
 
         return Inertia::render('Admin/Proveedores/Index', [
-            'proveedores' => $proveedores,
-            'filters' => (object) $request->only(['search', 'sort', 'direction'])
+            'proveedores' => $proveedores->withQueryString(),
+            'filters' => (object) $filters
         ]);
     }
 
@@ -38,59 +35,28 @@ class ProveedorController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreSupplierRequest $request)
     {
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:150',
-            'ruc' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:255',
-            'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:150',
-            'contacto' => 'nullable|string|max:150',
-            'activo' => 'boolean',
-        ]);
-
-        Proveedor::create($validated);
-
+        $this->supplierService->createSupplier($request->validated());
         return redirect()->route('proveedores.index')->with('success', 'Proveedor creado exitosamente.');
     }
 
-    public function edit(string $id)
+    public function edit(int $id)
     {
-        $proveedor = Proveedor::findOrFail($id);
-
         return Inertia::render('Admin/Proveedores/Form', [
-            'proveedor' => $proveedor
+            'proveedor' => Proveedor::findOrFail($id)
         ]);
     }
 
-    public function update(Request $request, string $id)
+    public function update(StoreSupplierRequest $request, int $id)
     {
-        $proveedor = Proveedor::findOrFail($id);
-
-        $validated = $request->validate([
-            'nombre' => 'required|string|max:150',
-            'ruc' => 'nullable|string|max:20',
-            'direccion' => 'nullable|string|max:255',
-            'telefono' => 'nullable|string|max:20',
-            'email' => 'nullable|email|max:150',
-            'contacto' => 'nullable|string|max:150',
-            'activo' => 'boolean',
-        ]);
-
-        $proveedor->update($validated);
-
+        $this->supplierService->updateSupplier(Proveedor::findOrFail($id), $request->validated());
         return redirect()->route('proveedores.index')->with('success', 'Proveedor actualizado exitosamente.');
     }
 
-    public function destroy(string $id)
+    public function destroy(int $id)
     {
-        $proveedor = Proveedor::findOrFail($id);
-        // Soft delete? No, Proveedor doesn't have soft deletes by default in our migration. We just delete it.
-        // Wait, if it has products, we might not want to delete it.
-        // The foreign key is set null on delete, so it's safe to delete.
-        $proveedor->delete();
-
+        $this->supplierService->deleteSupplier(Proveedor::findOrFail($id));
         return redirect()->route('proveedores.index')->with('success', 'Proveedor eliminado exitosamente.');
     }
 }

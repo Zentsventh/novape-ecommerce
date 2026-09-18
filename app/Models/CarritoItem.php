@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CarritoItem extends Model
 {
@@ -14,12 +17,18 @@ class CarritoItem extends Model
         'cantidad'
     ];
 
-    public function carrito()
+    protected $casts = [
+        'cantidad' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function carrito(): BelongsTo
     {
         return $this->belongsTo(Carrito::class, 'carrito_id');
     }
 
-    public function variante()
+    public function variante(): BelongsTo
     {
         return $this->belongsTo(Variante::class, 'variante_id');
     }

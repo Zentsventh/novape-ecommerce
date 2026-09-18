@@ -1,98 +1,54 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Requests\Cart\AddToCartRequest;
+use App\Http\Requests\Cart\UpdateCartRequest;
+use App\Http\Requests\Cart\RemoveCartRequest;
 use App\Models\Producto;
+use App\Models\ReservaStock;
+use App\Models\Variante;
+use App\Services\Cart\CartService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
-    private function syncCartToDB($cart)
+    public function __construct(
+        private readonly CartService $cartService
+    ) {}
+
+    public function add(AddToCartRequest $request): RedirectResponse
     {
-        if (auth()->check()) {
-            $user = auth()->user();
-            $carrito = $user->carrito()->firstOrCreate(['session_id' => session()->getId()]);
-            
-            if (empty($cart)) {
-                $carrito->items()->delete();
-                return;
-            }
-
-            $variantesActuales = [];
-            foreach ($cart as $item) {
-                if (isset($item['variante_id'])) {
-                    $variantesActuales[] = $item['variante_id'];
-                    \App\Models\CarritoItem::updateOrCreate(
-                        ['carrito_id' => $carrito->id, 'variante_id' => $item['variante_id']],
-                        ['cantidad' => $item['cantidad']]
-                    );
-                }
-            }
-            
-            // Eliminar los que ya no están en el carrito actual
-            $carrito->items()->whereNotIn('variante_id', $variantesActuales)->delete();
-        }
-    }
-
-    /**
-     * Agrega un producto al carrito en la sesión.
-     */
-    public function add(Request $request)
-    {
-        $request->validate([
-            'producto_id' => 'required|integer|exists:producto,id',
-            'cantidad'    => 'required|integer|min:1'
-        ]);
-
-        $productoId = $request->producto_id;
-        $cantidad = $request->cantidad;
+        $productoId = (int) $request->input('producto_id');
+        $cantidad = (int) $request->input('cantidad');
         
         $producto = Producto::with(['imagenes', 'variantes'])->findOrFail($productoId);
         $imagen = $producto->imagenes->first();
-        
-        // Buscar la primera variante y su stock en el almacén E-Commerce
-        $almacenEcommerceId = \App\Models\ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
         $variante = $producto->variantes->first();
         
-        $stockActual = 0;
-        if ($variante) {
-            $stockAlmacen = \Illuminate\Support\Facades\DB::table('stock_almacen')
-                ->where('almacen_id', $almacenEcommerceId)
-                ->where('variante_id', $variante->id)
-                ->first();
-            $stockActual = $stockAlmacen ? $stockAlmacen->cantidad : 0;
-        }
-
-        $stockReservado = 0;
-        if ($variante) {
-            $stockReservado = \App\Models\ReservaStock::where('variante_id', $variante->id)
-                ->where('session_id', '!=', session()->getId())
-                ->where('expires_at', '>', now())
-                ->sum('cantidad');
-        }
-        $stockDisponible = max(0, $stockActual - $stockReservado);
+        $sessionId = session()->getId();
+        $stockDisponible = $this->cartService->getStockDisponible($variante, $sessionId);
 
         $cart = session()->get('cart', []);
-        $currentQuantity = isset($cart[$productoId]) ? $cart[$productoId]['cantidad'] : 0;
-
+        $currentQuantity = isset($cart[$productoId]) ? (int) $cart[$productoId]['cantidad'] : 0;
         $maxPermitido = min(5, $stockDisponible);
 
         if (($currentQuantity + $cantidad) > $maxPermitido) {
             if ($stockDisponible < 5) {
                 return back()->with('error', "Stock insuficiente. Solo puedes tener hasta {$stockDisponible} unidades de este producto.");
-            } else {
-                return back()->with('error', "No puedes agregar más de 5 unidades del mismo producto al carrito.");
             }
+            return back()->with('error', "No puedes agregar más de 5 unidades del mismo producto al carrito.");
         }
 
-        $precioFinal = $variante ? (float) $variante->precio : 0;
+        $precioFinal = $variante ? (float) $variante->precio : 0.0;
 
-        // Si el producto ya está en el carrito, sumamos la cantidad
         if (isset($cart[$productoId])) {
             $cart[$productoId]['cantidad'] += $cantidad;
-            $cart[$productoId]['precio'] = $precioFinal; // Actualizar precio por si cambió
+            $cart[$productoId]['precio'] = $precioFinal;
         } else {
-            // Si no está, lo agregamos
             $cart[$productoId] = [
                 'id' => $producto->id,
                 'nombre' => $producto->nombre,
@@ -104,122 +60,78 @@ class CartController extends Controller
         }
 
         session()->put('cart', $cart);
-        $this->syncCartToDB($cart);
+        $this->cartService->syncCartToDB($cart, $sessionId);
         
         if ($variante) {
-            $this->syncReserva($variante->id, $cart[$productoId]['cantidad']);
+            $this->cartService->syncReserva($variante->id, $cart[$productoId]['cantidad'], $sessionId);
         }
 
         return back()->with('success', 'Producto agregado al carrito exitosamente.');
     }
 
-    /**
-     * Actualiza la cantidad de un producto en el carrito.
-     */
-    public function update(Request $request)
+    public function update(UpdateCartRequest $request): RedirectResponse
     {
-        $request->validate([
-            'producto_id' => 'required|integer',
-            'cantidad'    => 'required|integer|min:1'
-        ]);
-
         $cart = session()->get('cart', []);
-        $productoId = $request->producto_id;
+        $productoId = (int) $request->input('producto_id');
+        $cantidadSolicitada = (int) $request->input('cantidad');
 
-        if (isset($cart[$productoId])) {
-            $varianteId = $cart[$productoId]['variante_id'] ?? null;
-            $stockDisponible = 0;
-            if ($varianteId) {
-                $almacenEcommerceId = \App\Models\ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
-                $variante = \App\Models\Variante::find($varianteId);
-                
-                $stockActual = 0;
-                if ($variante) {
-                    $stockAlmacen = \Illuminate\Support\Facades\DB::table('stock_almacen')
-                        ->where('almacen_id', $almacenEcommerceId)
-                        ->where('variante_id', $variante->id)
-                        ->first();
-                    $stockActual = $stockAlmacen ? $stockAlmacen->cantidad : 0;
-                }
-                $stockReservado = 0;
-                if ($variante) {
-                    $stockReservado = \App\Models\ReservaStock::where('variante_id', $variante->id)
-                        ->where('session_id', '!=', session()->getId())
-                        ->where('expires_at', '>', now())
-                        ->sum('cantidad');
-                }
-                $stockDisponible = max(0, $stockActual - $stockReservado);
-                $maxPermitido = min(5, $stockDisponible);
-
-                $nuevaCantidad = min((int)$request->cantidad, $maxPermitido);
-            } else {
-                $nuevaCantidad = (int)$request->cantidad;
-            }
-
-            $cart[$productoId]['cantidad'] = $nuevaCantidad;
-            session()->put('cart', $cart);
-            $this->syncCartToDB($cart);
-            
-            if ($varianteId) {
-                $this->syncReserva($varianteId, $nuevaCantidad);
-            }
-            
-            return back()->with('success', 'Carrito actualizado.');
+        if (!isset($cart[$productoId])) {
+            return back()->with('error', 'El producto no se encontró en el carrito.');
         }
 
-        return back()->with('error', 'El producto no se encontró en el carrito.');
+        $varianteId = $cart[$productoId]['variante_id'] ?? null;
+        $sessionId = session()->getId();
+        
+        if ($varianteId) {
+            $variante = Variante::find($varianteId);
+            $stockDisponible = $this->cartService->getStockDisponible($variante, $sessionId);
+            $maxPermitido = min(5, $stockDisponible);
+            $nuevaCantidad = min($cantidadSolicitada, $maxPermitido);
+        } else {
+            $nuevaCantidad = $cantidadSolicitada;
+        }
+
+        $cart[$productoId]['cantidad'] = $nuevaCantidad;
+        session()->put('cart', $cart);
+        $this->cartService->syncCartToDB($cart, $sessionId);
+        
+        if ($varianteId) {
+            $this->cartService->syncReserva($varianteId, $nuevaCantidad, $sessionId);
+        }
+        
+        return back()->with('success', 'Carrito actualizado.');
     }
 
-    /**
-     * Elimina un producto específico del carrito.
-     */
-    public function remove(Request $request)
+    public function remove(RemoveCartRequest $request): RedirectResponse
     {
-        $request->validate([
-            'producto_id' => 'required|integer'
-        ]);
 
         $cart = session()->get('cart', []);
-        $productoId = $request->producto_id;
+        $productoId = (int) $request->input('producto_id');
 
         if (isset($cart[$productoId])) {
             $varianteId = $cart[$productoId]['variante_id'] ?? null;
             unset($cart[$productoId]);
             session()->put('cart', $cart);
-            $this->syncCartToDB($cart);
+            
+            $sessionId = session()->getId();
+            $this->cartService->syncCartToDB($cart, $sessionId);
             
             if ($varianteId) {
-                $this->syncReserva($varianteId, 0);
+                $this->cartService->syncReserva($varianteId, 0, $sessionId);
             }
         }
 
         return back()->with('success', 'Producto eliminado del carrito.');
     }
 
-    /**
-     * Vacía completamente el carrito.
-     */
-    public function clear()
+    public function clear(): RedirectResponse
     {
         session()->forget('cart');
-        $this->syncCartToDB([]);
-        \App\Models\ReservaStock::where('session_id', session()->getId())->delete();
-        return back()->with('success', 'El carrito ha sido vaciado.');
-    }
-
-    private function syncReserva($varianteId, $cantidad)
-    {
-        if (!$varianteId) return;
         $sessionId = session()->getId();
-        if ($cantidad > 0) {
-            \App\Models\ReservaStock::updateOrCreate(
-                ['session_id' => $sessionId, 'variante_id' => $varianteId],
-                ['cantidad' => $cantidad, 'expires_at' => now()->addMinutes(15)]
-            );
-        } else {
-            \App\Models\ReservaStock::where('session_id', $sessionId)
-                ->where('variante_id', $varianteId)
-                ->delete();
-        }
+        
+        $this->cartService->syncCartToDB([], $sessionId);
+        ReservaStock::where('session_id', $sessionId)->delete();
+        
+        return back()->with('success', 'El carrito ha sido vaciado.');
     }
 }

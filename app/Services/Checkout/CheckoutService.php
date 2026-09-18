@@ -1,0 +1,270 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Checkout;
+
+use App\Models\ConfiguracionSitio;
+use App\Models\Cupon;
+use App\Models\DireccionUsuario;
+use App\Models\Pedido;
+use App\Models\ReservaStock;
+use App\Models\Variante;
+use App\Services\SunatService;
+use App\Jobs\SendOrderConfirmationJob;
+use App\Jobs\SendWhatsAppNotification;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
+class CheckoutService
+{
+    public function validateAndCalculateTotal(array $cart, ?string $couponCode, float $shippingCost): array
+    {
+        $total = 0;
+        foreach ($cart as &$item) {
+            if (isset($item['variante_id'])) {
+                $variante = Variante::find($item['variante_id']);
+                if ($variante) {
+                    $item['precio'] = (float) $variante->precio;
+                }
+            }
+            $total += ($item['precio'] * $item['cantidad']);
+        }
+        unset($item);
+
+        if ($total <= 0) {
+            throw new \Exception('Carrito vacío');
+        }
+
+        $descuentoMonto = 0;
+        $couponId = null;
+
+        if (!empty($couponCode)) {
+            $cupon = Cupon::where('codigo', $couponCode)->where('activo', true)->first();
+            if ($cupon) {
+                $now = now();
+                $isValid = true;
+                if ($cupon->fecha_inicio && $now < $cupon->fecha_inicio) $isValid = false;
+                if ($cupon->fecha_fin && $now > $cupon->fecha_fin) $isValid = false;
+                if ($cupon->limite_usos && $cupon->usos_actuales >= $cupon->limite_usos) $isValid = false;
+                if ($cupon->monto_minimo && $total < $cupon->monto_minimo) $isValid = false;
+
+                if ($cupon->unico_por_cliente && auth()->check()) {
+                    $used = Pedido::where('usuario_id', auth()->id())
+                        ->where('cupon_id', $cupon->id)
+                        ->where('estado', 'Pagado')
+                        ->exists();
+                    if ($used) throw new \Exception('Ya has utilizado este cupón en una compra anterior.');
+                }
+
+                if ($isValid) {
+                    $couponId = $cupon->id;
+                    $descuentoMonto = $cupon->tipo === 'porcentaje' ? ($total * ($cupon->valor / 100)) : $cupon->valor;
+                }
+            }
+        }
+
+        $totalConDescuento = max(0, $total - $descuentoMonto) + $shippingCost;
+
+        if ($totalConDescuento < 2.00) {
+            throw new \Exception('El monto mínimo es de S/ 2.00');
+        }
+
+        return [
+            'total' => $total,
+            'totalConDescuento' => $totalConDescuento,
+            'descuentoMonto' => $descuentoMonto,
+            'couponId' => $couponId,
+            'cart' => $cart
+        ];
+    }
+
+    public function reserveStock(array $cart, string $sessionId): void
+    {
+        $stockError = DB::transaction(function () use ($cart, $sessionId) {
+            ReservaStock::where('expires_at', '<', now())->delete();
+
+            foreach ($cart as $item) {
+                $varianteId = $item['variante_id'] ?? null;
+                if ($varianteId) {
+                    $variante = Variante::lockForUpdate()->find($varianteId);
+                    $stockReal = $variante ? $variante->stock : 0;
+
+                    $reservado = ReservaStock::where('variante_id', $varianteId)
+                        ->where('session_id', '!=', $sessionId)
+                        ->sum('cantidad');
+                    
+                    $stockDisponible = max(0, $stockReal - $reservado);
+
+                    if ($item['cantidad'] > $stockDisponible) {
+                        return "Stock insuficiente para el producto: {$item['nombre']}. Solo quedan {$stockDisponible} unidades disponibles.";
+                    }
+                }
+            }
+            
+            ReservaStock::where('session_id', $sessionId)->delete();
+            foreach ($cart as $item) {
+                if (isset($item['variante_id'])) {
+                    ReservaStock::create([
+                        'session_id' => $sessionId,
+                        'variante_id' => $item['variante_id'],
+                        'cantidad' => $item['cantidad'],
+                        'expires_at' => now()->addMinutes(15)
+                    ]);
+                }
+            }
+
+            return null;
+        });
+
+        if ($stockError) {
+            throw new \Exception($stockError);
+        }
+    }
+
+    public function createPendingOrder(array $checkoutData, array $shippingAddress, ?string $documentoCliente, ?string $nombreFacturacion, ?string $direccionFacturacion, string $tipoComprobante, float $shippingCost): Pedido
+    {
+        return DB::transaction(function () use ($checkoutData, $shippingAddress, $documentoCliente, $nombreFacturacion, $direccionFacturacion, $tipoComprobante, $shippingCost) {
+            if (auth()->check() && !empty($shippingAddress['guardarDireccion'])) {
+                DireccionUsuario::firstOrCreate([
+                    'usuario_id' => auth()->id(),
+                    'direccion' => $shippingAddress['direccion'],
+                    'distrito' => $shippingAddress['distrito'],
+                ], [
+                    'referencia' => $shippingAddress['referencia'] ?? '',
+                    'departamento' => 'LIMA',
+                    'provincia' => 'LIMA',
+                ]);
+            }
+
+            $codigoPedido = session('checkout_pedido') ?: 'PED-'.date('ymd').'-'.strtoupper(Str::random(6));
+
+            $pedido = Pedido::where('codigo', $codigoPedido)->first();
+            $pedidoData = [
+                'usuario_id' => auth()->id(),
+                'codigo' => $codigoPedido,
+                'subtotal' => $checkoutData['total'],
+                'descuento' => $checkoutData['descuentoMonto'],
+                'costo_envio' => $shippingCost,
+                'total' => $checkoutData['totalConDescuento'],
+                'tipo_comprobante' => $tipoComprobante,
+                'documento_cliente' => $documentoCliente,
+                'nombre_facturacion' => $nombreFacturacion,
+                'direccion_facturacion' => $direccionFacturacion,
+                'direccion_envio_snapshot' => $shippingAddress,
+                'cupon_id' => $checkoutData['couponId'],
+            ];
+
+            if (!$pedido) {
+                $pedidoData['estado'] = 'Pendiente';
+                $pedido = Pedido::create($pedidoData);
+            } elseif ($pedido->estado === 'Pendiente') {
+                $pedido->update($pedidoData);
+                $pedido->items()->delete();
+            }
+
+            if ($pedido->estado === 'Pendiente') {
+                foreach ($checkoutData['cart'] as $item) {
+                    $pedido->items()->create([
+                        'variante_id' => $item['variante_id'] ?? null,
+                        'cantidad' => $item['cantidad'],
+                        'precio_unitario' => $item['precio'],
+                    ]);
+                }
+            }
+
+            session([
+                'checkout_pedido' => $codigoPedido,
+                'checkout_monto' => $checkoutData['totalConDescuento'],
+                'checkout_cupon_id' => $checkoutData['couponId'],
+            ]);
+
+            return $pedido;
+        });
+    }
+
+    public function processSuccessfulPayment(string $codigoPedido, float $montoPagado): bool
+    {
+        return DB::transaction(function () use ($codigoPedido, $montoPagado) {
+            $pedido = Pedido::with('items')->where('codigo', $codigoPedido)->lockForUpdate()->first();
+
+            if ($pedido && $pedido->estado === 'Pendiente') {
+                if (abs($montoPagado - $pedido->total) > 0.01) {
+                    Log::warning("Webhook Stripe: Monto pagado ($montoPagado) no coincide con total del pedido {$pedido->codigo} ({$pedido->total}).");
+                    throw new \Exception('Monto inválido');
+                }
+
+                $pedido->update(['estado' => 'Pagado']);
+
+                if ($pedido->cupon_id) {
+                    Cupon::where('id', $pedido->cupon_id)->increment('usos_actuales');
+                }
+
+                foreach ($pedido->items as $item) {
+                    if ($item->variante_id) {
+                        $variante = Variante::lockForUpdate()->find($item->variante_id);
+                        if ($variante) {
+                            $almacenEcommerceId = (int) ConfiguracionSitio::obtener('almacen_ecommerce_id', 1);
+
+                            $stockAlmacen = DB::table('stock_almacen')
+                                ->where('variante_id', $item->variante_id)
+                                ->where('almacen_id', $almacenEcommerceId)
+                                ->first();
+
+                            if ($stockAlmacen) {
+                                DB::table('stock_almacen')->where('id', $stockAlmacen->id)->decrement('cantidad', $item->cantidad);
+                            } else {
+                                DB::table('stock_almacen')->insert([
+                                    'almacen_id' => $almacenEcommerceId,
+                                    'variante_id' => $item->variante_id,
+                                    'cantidad' => 0 - $item->cantidad,
+                                    'created_at' => now(),
+                                    'updated_at' => now(),
+                                ]);
+                            }
+
+                            DB::statement('UPDATE variante SET stock = (SELECT COALESCE(SUM(cantidad), 0) FROM stock_almacen WHERE variante_id = ?) WHERE id = ?', [$item->variante_id, $item->variante_id]);
+
+                            DB::table('movimientos_almacen')->insert([
+                                'almacen_id' => $almacenEcommerceId,
+                                'variante_id' => $item->variante_id,
+                                'tipo' => 'salida',
+                                'cantidad' => -$item->cantidad,
+                                'referencia' => 'Venta Ecommerce Stripe - '.$pedido->codigo,
+                                'usuario_id' => $pedido->usuario_id ?? 1,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+                }
+
+                try {
+                    $sunatService = new SunatService();
+                    $sunatService->emitirComprobante($pedido);
+                } catch (\Exception $e) {
+                    Log::error("Error emitiendo comprobante SUNAT para pedido {$pedido->codigo}: ".$e->getMessage());
+                }
+
+                return true;
+            }
+            return false;
+        });
+    }
+
+    public function finalizeSuccessAction(string $codigoPedido, ?string $paymentEmail): void
+    {
+        $pedido = Pedido::where('codigo', $codigoPedido)->first();
+        if ($pedido) {
+            $correoDestino = $paymentEmail ?: ($pedido->usuario ? $pedido->usuario->email : null);
+            if ($correoDestino) {
+                SendOrderConfirmationJob::dispatch($pedido->id, $correoDestino);
+            }
+            if ($pedido->usuario && !empty($pedido->usuario->telefono)) {
+                $mensaje = "¡Hola {$pedido->usuario->nombres}! Tu pedido {$pedido->codigo} ha sido confirmado por un total de S/ {$pedido->total}. ¡Gracias por comprar en NOVAPE!";
+                SendWhatsAppNotification::dispatch($pedido->usuario->telefono, $mensaje);
+            }
+        }
+    }
+}

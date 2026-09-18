@@ -1,0 +1,219 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Admin\Dashboard;
+
+use App\Models\Producto;
+use App\Models\Categoria;
+use App\Models\Marca;
+use App\Models\Pedido;
+use Illuminate\Support\Facades\DB;
+use App\Models\ConfiguracionSitio;
+use Carbon\Carbon;
+
+class AnalyticsService
+{
+    public function getDashboardStats(string $startDate, string $endDate, string $sortBy, string $sortOrder): array
+    {
+        $dateFilterQuery = function ($query) use ($startDate, $endDate) {
+            if ($startDate) $query->whereDate('created_at', '>=', $startDate);
+            if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+            return $query;
+        };
+
+        $totalProductos = Producto::count();
+        $totalCategorias = Categoria::count();
+
+        $totalPedidos = $dateFilterQuery(Pedido::query())->count();
+        $pedidosPendientes = $dateFilterQuery(Pedido::whereRaw('LOWER(estado) = ?', ['pendiente']))->count();
+        $pedidosEnviados = $dateFilterQuery(Pedido::whereRaw('LOWER(estado) = ?', ['enviado']))->count();
+        $pedidosCompletados = $dateFilterQuery(Pedido::whereRaw('LOWER(estado) = ?', ['completado']))->count();
+        $pedidosCancelados = $dateFilterQuery(Pedido::whereRaw('LOWER(estado) = ?', ['cancelado']))->count();
+
+        $ventasTotalQuery = Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado']);
+        $ventasTotal = (float) $dateFilterQuery($ventasTotalQuery)->sum('total');
+
+        $ventasPosQuery = DB::table('ventas_pos');
+        $ventasPosTotal = (float) $dateFilterQuery($ventasPosQuery)->sum('total');
+        $ventasTotal += $ventasPosTotal;
+
+        $costosGastos = (float) $dateFilterQuery(DB::table('gastos'))->sum('monto');
+        $costosCompras = (float) $dateFilterQuery(DB::table('compras'))->sum('total');
+
+        $costosTotal = $costosGastos + $costosCompras;
+        $gananciaNeta = $ventasTotal - $costosTotal;
+
+        $ventasMesQuery = Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado'])
+            ->where('created_at', '>=', now()->startOfMonth());
+        $ventasMes = (float) $ventasMesQuery->sum('total');
+
+        $ventasPosMesQuery = DB::table('ventas_pos')->where('created_at', '>=', now()->startOfMonth());
+        $ventasMes += (float) $ventasPosMesQuery->sum('total');
+
+        $pedidosRecientes = $dateFilterQuery(Pedido::with('usuario'))
+            ->orderBy($sortBy, $sortOrder)
+            ->limit(10)
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'codigo' => $p->codigo,
+                    'total' => $p->total,
+                    'estado' => $p->estado,
+                    'created_at' => $p->created_at,
+                    'usuario_nombre' => $p->usuario ? $p->usuario->nombres . ' ' . $p->usuario->apellidos : 'Cliente',
+                ];
+            });
+
+        $endDateCarbon = $endDate ? Carbon::parse($endDate) : now();
+        $ventasSemana = [];
+        $nombresDias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        
+        for ($i = 6; $i >= 0; $i--) {
+            $day = $endDateCarbon->copy()->subDays($i);
+            $webSales = (float) Pedido::whereRaw('LOWER(estado) IN (?, ?, ?)', ['pagado', 'enviado', 'completado'])
+                ->whereDate('created_at', $day)
+                ->sum('total');
+            $posSales = (float) DB::table('ventas_pos')->whereDate('created_at', $day)->sum('total');
+            $ventasSemana[] = [
+                'dia' => $nombresDias[$day->dayOfWeek],
+                'total' => $webSales + $posSales
+            ];
+        }
+
+        return [
+            'totalProductos' => $totalProductos,
+            'totalCategorias' => $totalCategorias,
+            'totalPedidos' => $totalPedidos,
+            'pedidosPendientes' => $pedidosPendientes,
+            'pedidosEnviados' => $pedidosEnviados,
+            'pedidosCompletados' => $pedidosCompletados,
+            'pedidosCancelados' => $pedidosCancelados,
+            'ventasTotal' => $ventasTotal,
+            'costosTotal' => $costosTotal,
+            'gananciaNeta' => $gananciaNeta,
+            'ventasMes' => $ventasMes,
+            'pedidosRecientes' => $pedidosRecientes,
+            'ventasSemana' => $ventasSemana,
+            'stockBajo' => $this->getLowStock(),
+            'topProductosVendidos' => $this->getTopProducts(null, null),
+        ];
+    }
+
+    public function getLowStock(int $limit = 150): array
+    {
+        $allLowStock = DB::select("
+            SELECT p.id, p.nombre, COALESCE(SUM(v.stock), 0) as stock_total
+            FROM producto p
+            LEFT JOIN variante v ON v.producto_id = p.id
+            GROUP BY p.id, p.nombre
+            ORDER BY stock_total ASC
+            LIMIT ?
+        ", [$limit]);
+        
+        $productIds = array_column($allLowStock, 'id');
+        $productosData = Producto::with(['imagenes', 'marca'])->whereIn('id', $productIds)->get()->keyBy('id');
+        
+        return collect($allLowStock)->map(function ($r) use ($productosData) {
+            $p = $productosData->get($r->id);
+            return [
+                'id' => $r->id,
+                'nombre' => $r->nombre,
+                'marca' => $p && $p->marca ? $p->marca->nombre : null,
+                'imagen' => $p && $p->imagenes->first() ? $p->imagenes->first()->url : null,
+                'stock' => (int) $r->stock_total,
+                'activo' => $p ? $p->activo : false,
+            ];
+        })->toArray();
+    }
+
+    public function getTopProducts(?string $startDate, ?string $endDate): array
+    {
+        $topProductosVendidos = [];
+        $queryTop = DB::query()
+            ->fromSub(function($query) use ($startDate, $endDate) {
+                $q1 = DB::table('venta_pos_items')
+                      ->join('ventas_pos', 'ventas_pos.id', '=', 'venta_pos_items.venta_pos_id') // Corrected join key
+                      ->select('variante_id', 'cantidad');
+                if ($startDate) $q1->whereDate('ventas_pos.created_at', '>=', $startDate);
+                if ($endDate) $q1->whereDate('ventas_pos.created_at', '<=', $endDate);
+
+                $q2 = DB::table('pedido_item')
+                      ->join('pedido', 'pedido.id', '=', 'pedido_item.pedido_id')
+                      ->where('pedido.estado', 'completado')
+                      ->select('variante_id', 'cantidad');
+                if ($startDate) $q2->whereDate('pedido.created_at', '>=', $startDate);
+                if ($endDate) $q2->whereDate('pedido.created_at', '<=', $endDate);
+
+                $query->from($q1->unionAll($q2), 'ventas_combinadas');
+            }, 'ventas_combinadas')
+            ->select('variante_id', DB::raw('SUM(cantidad) as total_vendido'))
+            ->groupBy('variante_id')
+            ->orderBy('total_vendido', 'desc')
+            ->limit(15)
+            ->get();
+            
+        foreach ($queryTop as $item) {
+            $variante = \App\Models\Variante::with('producto')->find($item->variante_id);
+            $nombre = $variante && $variante->producto ? $variante->producto->nombre : 'Desconocido';
+            
+            $encontrado = false;
+            foreach ($topProductosVendidos as &$tv) {
+                if ($tv['nombre'] === $nombre) {
+                    $tv['cantidad'] += (int) $item->total_vendido;
+                    $encontrado = true;
+                    break;
+                }
+            }
+            if (!$encontrado) {
+                $topProductosVendidos[] = ['nombre' => $nombre, 'cantidad' => (int) $item->total_vendido];
+            }
+        }
+        
+        usort($topProductosVendidos, function($a, $b) { return $b['cantidad'] <=> $a['cantidad']; });
+        return array_slice($topProductosVendidos, 0, 6);
+    }
+
+    public function searchGlobal(string $query, object $user): array
+    {
+        $productos = [];
+        $pedidos = [];
+        $usuarios = [];
+
+        if ($user->tienePermiso('ver_productos')) {
+            $productos = Producto::with('variantes')
+                ->where('nombre', 'like', "%$query%")
+                ->orWhere('id', 'like', "$query%")
+                ->limit(5)->get()->map(function($p) {
+                    $stock = 0;
+                    foreach($p->variantes as $v) $stock += $v->stock;
+                    return [
+                        'id' => $p->id,
+                        'nombre' => $p->nombre,
+                        'precio' => $p->variantes->first() ? $p->variantes->first()->precio : 0,
+                        'stock' => $stock
+                    ];
+                });
+        }
+
+        if ($user->tienePermiso('ver_pedidos')) {
+            $pedidosQuery = Pedido::with('usuario:id,nombres,apellidos')
+                ->where('id', 'like', "$query%")
+                ->orWhereHas('usuario', function($q) use ($query) {
+                    $q->where('nombres', 'like', "%$query%")->orWhere('email', 'like', "%$query%");
+                });
+            $pedidos = $pedidosQuery->limit(5)->get(['id', 'estado', 'total', 'usuario_id']);
+        }
+
+        if ($user->tienePermiso('ver_usuarios')) {
+            $usuarios = \App\Models\Usuario::where('nombres', 'like', "%$query%")
+                ->orWhere('apellidos', 'like', "%$query%")
+                ->orWhere('email', 'like', "%$query%")
+                ->orWhere('dni', 'like', "%$query%")
+                ->limit(5)->get(['id', 'nombres', 'apellidos', 'email', 'dni']);
+        }
+
+        return ['productos' => $productos, 'pedidos' => $pedidos, 'usuarios' => $usuarios];
+    }
+}

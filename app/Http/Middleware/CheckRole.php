@@ -19,7 +19,9 @@ class CheckRole
     public function handle(Request $request, Closure $next, $role)
     {
         if (!Auth::check()) {
-            return redirect('/login');
+            return $request->expectsJson() 
+                ? response()->json(['error' => 'No autorizado'], 401)
+                : redirect('/login');
         }
 
         if (!Auth::user()->tieneRol($role)) {
